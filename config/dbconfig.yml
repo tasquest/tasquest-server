@@ -1,0 +1,6 @@
+
+database:
+  url: mongodb://localhost:27017
+  timeout: 10
+  user: tasquest
+  password: tasquest
