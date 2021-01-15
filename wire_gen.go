@@ -9,10 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
+	"tasquest.com/server"
 	"tasquest.com/server/api"
-	"tasquest.com/server/common/errorhandler"
-	"tasquest.com/server/common/logs"
-	"tasquest.com/server/domain/profiles"
+	"tasquest.com/server/gamification/adventurers"
+	"tasquest.com/server/gamification/tasks"
 	"tasquest.com/server/infra/database"
 	"tasquest.com/server/infra/web"
 	"tasquest.com/server/security"
@@ -21,13 +21,13 @@ import (
 // Injectors from init_instances.go:
 
 func loggerWireBuilder() *logrus.Logger {
-	logger := logs.ProvideLogger()
+	logger := server.ProvideLogger()
 	return logger
 }
 
-func databaseWireBuilder() *mongo.Client {
-	client := database.ProvideDatasource()
-	return client
+func databaseWireBuilder() *mongo.Database {
+	mongoDatabase := database.ProvideDatasource()
+	return mongoDatabase
 }
 
 func webServerWireBuilder() *gin.Engine {
@@ -36,40 +36,57 @@ func webServerWireBuilder() *gin.Engine {
 }
 
 func userRepositoryWireBuilder() security.UserRepository {
-	client := database.ProvideDatasource()
-	mongoUserRepository := security.ProvideMongoUserRepository(client)
+	mongoDatabase := database.ProvideDatasource()
+	mongoUserRepository := security.ProvideMongoUserRepository(mongoDatabase)
 	return mongoUserRepository
 }
 
 func userManagementWireBuilder() security.UserManagement {
-	client := database.ProvideDatasource()
-	mongoUserRepository := security.ProvideMongoUserRepository(client)
+	mongoDatabase := database.ProvideDatasource()
+	mongoUserRepository := security.ProvideMongoUserRepository(mongoDatabase)
 	defaultUserManagement := security.ProvideDefaultUserManagement(mongoUserRepository)
 	return defaultUserManagement
 }
 
-func profileRepositoryWireBuilder() profiles.ProfileRepository {
-	client := database.ProvideDatasource()
-	mongoProfileRepository := profiles.ProvideMongoProfileRepository(client)
-	return mongoProfileRepository
+func adventurerRepositoryWireBuilder() adventurers.AdventurerRepository {
+	mongoDatabase := database.ProvideDatasource()
+	mongoAdventurerRepository := adventurers.ProvideMongoAdventurerRepository(mongoDatabase)
+	return mongoAdventurerRepository
 }
 
-func profileManagerWireBuilder() profiles.ProfileManager {
-	client := database.ProvideDatasource()
-	mongoProfileRepository := profiles.ProvideMongoProfileRepository(client)
-	mongoUserRepository := security.ProvideMongoUserRepository(client)
+func adventurerManagerWireBuilder() adventurers.AdventurerManager {
+	mongoDatabase := database.ProvideDatasource()
+	mongoAdventurerRepository := adventurers.ProvideMongoAdventurerRepository(mongoDatabase)
+	mongoUserRepository := security.ProvideMongoUserRepository(mongoDatabase)
 	defaultUserManagement := security.ProvideDefaultUserManagement(mongoUserRepository)
-	defaultProfileManager := profiles.ProvideDefaultProfileManager(mongoProfileRepository, defaultUserManagement)
-	return defaultProfileManager
+	defaultAdventurerManager := adventurers.ProvideDefaultAdventurerManager(mongoAdventurerRepository, defaultUserManagement)
+	return defaultAdventurerManager
+}
+
+func taskRepositoryWireBuilder() tasks.TaskRepository {
+	mongoDatabase := database.ProvideDatasource()
+	mongoTaskRepository := tasks.ProvideMongoTaskRepository(mongoDatabase)
+	return mongoTaskRepository
+}
+
+func taskManagerWireBuilder() tasks.TaskManager {
+	mongoDatabase := database.ProvideDatasource()
+	mongoTaskRepository := tasks.ProvideMongoTaskRepository(mongoDatabase)
+	mongoAdventurerRepository := adventurers.ProvideMongoAdventurerRepository(mongoDatabase)
+	mongoUserRepository := security.ProvideMongoUserRepository(mongoDatabase)
+	defaultUserManagement := security.ProvideDefaultUserManagement(mongoUserRepository)
+	defaultAdventurerManager := adventurers.ProvideDefaultAdventurerManager(mongoAdventurerRepository, defaultUserManagement)
+	taskManagerImpl := tasks.ProvideDefaultTaskManager(mongoTaskRepository, defaultAdventurerManager)
+	return taskManagerImpl
 }
 
 func authApiWireBuilder() *api.AuthAPI {
 	engine := web.ProvideWebServer()
-	client := database.ProvideDatasource()
-	mongoUserRepository := security.ProvideMongoUserRepository(client)
+	mongoDatabase := database.ProvideDatasource()
+	mongoUserRepository := security.ProvideMongoUserRepository(mongoDatabase)
 	defaultUserManagement := security.ProvideDefaultUserManagement(mongoUserRepository)
-	logger := logs.ProvideLogger()
-	errorHandler := errorhandler.ProvideErrorHandler(logger)
+	logger := server.ProvideLogger()
+	errorHandler := server.ProvideErrorHandler(logger)
 	authAPI := api.ProvideAuthAPI(engine, defaultUserManagement, errorHandler)
 	return authAPI
 }
@@ -86,8 +103,11 @@ func Bootstrap() {
 	userRepositoryWireBuilder()
 	userManagementWireBuilder()
 
-	profileRepositoryWireBuilder()
-	profileManagerWireBuilder()
+	adventurerRepositoryWireBuilder()
+	adventurerManagerWireBuilder()
+
+	taskRepositoryWireBuilder()
+	taskManagerWireBuilder()
 
 	authApiWireBuilder()
 }

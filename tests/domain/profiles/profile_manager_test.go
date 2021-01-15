@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"tasquest.com/server/domain/profiles"
+	"tasquest.com/server/gamification/adventurers"
 	"tasquest.com/server/security"
 	"tasquest.com/tests/mocks"
 	"testing"
@@ -14,12 +14,12 @@ import (
 func TestCreateProfileSuccessfully(t *testing.T) {
 	profileRepository := new(mocks.ProfileRepository)
 	userManagement := new(mocks.UserManagement)
-	profileManager := profiles.DefaultProfileManager{
-		ProfileRepository: profileRepository,
-		UserManagement:    userManagement,
+	profileManager := adventurers.DefaultAdventurerManager{
+		adventurerRepository: profileRepository,
+		userManagement:       userManagement,
 	}
 
-	command := profiles.CreateUserProfile{
+	command := adventurers.CreateAdventurer{
 		UserID:   "1",
 		Name:     "Test",
 		Surname:  "Tester",
@@ -28,7 +28,7 @@ func TestCreateProfileSuccessfully(t *testing.T) {
 
 	userID, _ := primitive.ObjectIDFromHex("1")
 
-	profile := profiles.Profile{
+	profile := adventurers.Adventurer{
 		ID:       primitive.ObjectID{},
 		UserID:   userID,
 		Name:     "Test",
@@ -37,7 +37,7 @@ func TestCreateProfileSuccessfully(t *testing.T) {
 	}
 
 	userManagement.On("FetchUser", "1").Return(security.User{}, nil)
-	profileRepository.On("FindByUser", "1").Return(profiles.Profile{}, nil)
+	profileRepository.On("FindByUser", "1").Return(adventurers.Adventurer{}, nil)
 	profileRepository.On("Save", mock.Anything).Return(profile, nil)
 
 	createdProfile, err := profileManager.CreateProfile(command)
@@ -53,12 +53,12 @@ func TestCreateProfileSuccessfully(t *testing.T) {
 func TestCreateProfileNoUser(t *testing.T) {
 	profileRepository := new(mocks.ProfileRepository)
 	userManagement := new(mocks.UserManagement)
-	profileManager := profiles.DefaultProfileManager{
-		ProfileRepository: profileRepository,
-		UserManagement:    userManagement,
+	profileManager := adventurers.DefaultAdventurerManager{
+		adventurerRepository: profileRepository,
+		userManagement:       userManagement,
 	}
 
-	command := profiles.CreateUserProfile{
+	command := adventurers.CreateAdventurer{
 		UserID:   "1",
 		Name:     "Test",
 		Surname:  "Tester",
@@ -71,7 +71,7 @@ func TestCreateProfileNoUser(t *testing.T) {
 
 	assert.NotNil(t, err)
 	assert.Equal(t, security.ErrUserNotFound.Message, err.Error())
-	assert.Equal(t, profiles.Profile{}, createdProfile)
+	assert.Equal(t, adventurers.Adventurer{}, createdProfile)
 
 	profileRepository.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
@@ -80,12 +80,12 @@ func TestCreateProfileNoUser(t *testing.T) {
 func TestCreateProfileAlreadyExists(t *testing.T) {
 	profileRepository := new(mocks.ProfileRepository)
 	userManagement := new(mocks.UserManagement)
-	profileManager := profiles.DefaultProfileManager{
-		ProfileRepository: profileRepository,
-		UserManagement:    userManagement,
+	profileManager := adventurers.DefaultAdventurerManager{
+		adventurerRepository: profileRepository,
+		userManagement:       userManagement,
 	}
 
-	command := profiles.CreateUserProfile{
+	command := adventurers.CreateAdventurer{
 		UserID:   "1",
 		Name:     "Test",
 		Surname:  "Tester",
@@ -94,7 +94,7 @@ func TestCreateProfileAlreadyExists(t *testing.T) {
 
 	userID, _ := primitive.ObjectIDFromHex("1")
 
-	existingProfile := profiles.Profile{
+	existingProfile := adventurers.Adventurer{
 		ID:       primitive.ObjectID{},
 		UserID:   userID,
 		Name:     "Test",
@@ -108,8 +108,8 @@ func TestCreateProfileAlreadyExists(t *testing.T) {
 	createdProfile, err := profileManager.CreateProfile(command)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, profiles.ErrProfileAlreadyExists.Message, err.Error())
-	assert.Equal(t, profiles.Profile{}, createdProfile)
+	assert.Equal(t, adventurers.ErrAdventurerAlreadyExists.Message, err.Error())
+	assert.Equal(t, adventurers.Adventurer{}, createdProfile)
 
 	profileRepository.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
@@ -118,12 +118,12 @@ func TestCreateProfileAlreadyExists(t *testing.T) {
 func TestCreateProfileFailedToFetchProfile(t *testing.T) {
 	profileRepository := new(mocks.ProfileRepository)
 	userManagement := new(mocks.UserManagement)
-	profileManager := profiles.DefaultProfileManager{
-		ProfileRepository: profileRepository,
-		UserManagement:    userManagement,
+	profileManager := adventurers.DefaultAdventurerManager{
+		adventurerRepository: profileRepository,
+		userManagement:       userManagement,
 	}
 
-	command := profiles.CreateUserProfile{
+	command := adventurers.CreateAdventurer{
 		UserID:   "1",
 		Name:     "Test",
 		Surname:  "Tester",
@@ -131,13 +131,13 @@ func TestCreateProfileFailedToFetchProfile(t *testing.T) {
 	}
 
 	userManagement.On("FetchUser", "1").Return(security.User{}, nil)
-	profileRepository.On("FindByUser", "1").Return(profiles.Profile{}, profiles.ErrFailedToFetchProfile)
+	profileRepository.On("FindByUser", "1").Return(adventurers.Adventurer{}, adventurers.ErrFailedToFetchAdventurer)
 
 	createdProfile, err := profileManager.CreateProfile(command)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Failed to fetch profile: An unexpected error occurred", err.Error())
-	assert.Equal(t, profiles.Profile{}, createdProfile)
+	assert.Equal(t, adventurers.Adventurer{}, createdProfile)
 
 	profileRepository.AssertExpectations(t)
 	userManagement.AssertExpectations(t)

@@ -8,21 +8,21 @@ import (
 )
 
 type DefaultUserManagement struct {
-	UserRepository UserRepository
+	userRepository UserRepository
 }
 
-var userManagementOnce sync.Once
+var IsUserManagementInstanced sync.Once
 var userManagementInstance *DefaultUserManagement
 
 func ProvideDefaultUserManagement(repository UserRepository) *DefaultUserManagement {
-	userManagementOnce.Do(func() {
-		userManagementInstance = &DefaultUserManagement{UserRepository: repository}
+	IsUserManagementInstanced.Do(func() {
+		userManagementInstance = &DefaultUserManagement{userRepository: repository}
 	})
 	return userManagementInstance
 }
 
 func (um *DefaultUserManagement) RegisterUser(command RegisterUserCommand) (User, error) {
-	existingUser, err := um.UserRepository.FindByEmail(command.Email)
+	existingUser, err := um.userRepository.FindByEmail(command.Email)
 
 	if err != nil {
 		return User{}, errors.WithStack(err)
@@ -48,11 +48,11 @@ func (um *DefaultUserManagement) RegisterUser(command RegisterUserCommand) (User
 		Active:   false,
 	}
 
-	return um.UserRepository.Save(newUser)
+	return um.userRepository.Save(newUser)
 }
 
 func (um *DefaultUserManagement) FetchUser(id string) (User, error) {
-	usr, err := um.UserRepository.FindByID(id)
+	usr, err := um.userRepository.FindByID(id)
 
 	if err != nil {
 		return User{}, errors.WithStack(err)

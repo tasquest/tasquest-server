@@ -2,34 +2,34 @@ package security
 
 import (
 	"net/http"
-	"tasquest.com/server/common/errorhandler"
+	"tasquest.com/server"
 )
 
-var ErrUserNotFound = errorhandler.ApplicationError{
+var ErrUserNotFound = server.ApplicationError{
 	HTTPCode: http.StatusNotFound,
 	Title:    "User not found",
 	Message:  "The informed user was not found",
 }
 
-var ErrFailedToSaveUser = errorhandler.ApplicationError{
+var ErrFailedToSaveUser = server.ApplicationError{
 	HTTPCode: http.StatusInternalServerError,
 	Title:    "Failed to save user",
 	Message:  "It was not possible to save the informed user",
 }
 
-var ErrUserAlreadyExists = errorhandler.ApplicationError{
+var ErrUserAlreadyExists = server.ApplicationError{
 	HTTPCode: http.StatusConflict,
 	Title:    "User already exists",
 	Message:  "There is already an user registered for the informed e-mail",
 }
 
-var ErrFailedPasswordGenerate = errorhandler.ApplicationError{
+var ErrFailedPasswordGenerate = server.ApplicationError{
 	HTTPCode: http.StatusInternalServerError,
 	Title:    "Password failure",
 	Message:  "The system failed to generate a safe password",
 }
 
-var ErrPasswordNotMatch = errorhandler.ApplicationError{
+var ErrPasswordNotMatch = server.ApplicationError{
 	HTTPCode: http.StatusBadRequest,
 	Title:    "Invalid Password",
 	Message:  "The Password and the confirmation does not match",

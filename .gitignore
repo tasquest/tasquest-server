@@ -12,6 +12,7 @@
 
 # Test binary, built with `go test -c`
 *.test
+tasquest.com
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -150,3 +151,8 @@ Temporary Items
 *.code-workspace
 
 # End of https://www.toptal.com/developers/gitignore/api/go,intellij+all,vscode,macos
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build

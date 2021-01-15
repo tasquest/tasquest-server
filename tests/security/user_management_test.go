@@ -28,7 +28,7 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
 	userRepositoryMock.On("Save", mock.Anything).Return(expectedUser, nil).Once()
 
-	userManagement := security.DefaultUserManagement{UserRepository: userRepositoryMock}
+	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	_, _ = userManagement.RegisterUser(command)
 
@@ -53,7 +53,7 @@ func TestUserAlreadyExists(t *testing.T) {
 
 	userRepositoryMock.On("FindByEmail", command.Email).Return(existingUser, nil).Once()
 
-	userManagement := security.DefaultUserManagement{UserRepository: userRepositoryMock}
+	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	_, err := userManagement.RegisterUser(command)
 
@@ -73,7 +73,7 @@ func TestPasswordsNotMatching(t *testing.T) {
 
 	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
 
-	userManagement := security.DefaultUserManagement{UserRepository: userRepositoryMock}
+	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	_, err := userManagement.RegisterUser(command)
 
@@ -89,7 +89,7 @@ func TestFetchUserSuccessfully(t *testing.T) {
 
 	userRepositoryMock.On("FindByID", anyID).Return(security.User{}, nil).Once()
 
-	userManagement := security.DefaultUserManagement{UserRepository: userRepositoryMock}
+	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	usr, err := userManagement.FetchUser(anyID)
 

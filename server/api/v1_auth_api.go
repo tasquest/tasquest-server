@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"sync"
-	"tasquest.com/server/common/errorhandler"
+	"tasquest.com/server"
 	"tasquest.com/server/security"
 )
 
@@ -36,7 +36,7 @@ func (auth *AuthAPI) registerUser(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&command); err != nil {
 		auth.handler.Handle(err)
-		c.JSON(http.StatusBadRequest, errorhandler.ApplicationError{
+		c.JSON(http.StatusBadRequest, server.ApplicationError{
 			Title:   "Invalid Requisition",
 			Message: err.Error(),
 		})
@@ -47,7 +47,7 @@ func (auth *AuthAPI) registerUser(c *gin.Context) {
 
 	if err != nil {
 		auth.handler.Handle(err)
-		appErr, _ := errorhandler.ParseError(err)
+		appErr, _ := server.ParseError(err)
 		c.JSON(appErr.HTTPCode, appErr)
 		return
 	}
@@ -61,7 +61,7 @@ func (auth *AuthAPI) fetchUser(c *gin.Context) {
 
 	if err != nil {
 		auth.handler.Handle(err)
-		appErr, _ := errorhandler.ParseError(err)
+		appErr, _ := server.ParseError(err)
 		c.JSON(appErr.HTTPCode, appErr)
 		return
 	}

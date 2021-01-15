@@ -1,12 +1,12 @@
 package main
 
 import (
-	"tasquest.com/server/common"
+	"tasquest.com/server"
 	"tasquest.com/server/infra/web"
 )
 
 func main() {
-	common.PrintLogo()
+	server.PrintLogo()
 
 	Bootstrap()
 

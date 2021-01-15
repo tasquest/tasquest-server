@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"strings"
 	"sync"
-	"tasquest.com/server/common"
+	"tasquest.com/server"
 	"time"
 )
 
@@ -20,11 +20,11 @@ type DBConfig struct {
 }
 
 var once sync.Once
-var instance *mongo.Client
+var instance *mongo.Database
 
-func ProvideDatasource() *mongo.Client {
+func ProvideDatasource() *mongo.Database {
 	once.Do(func() {
-		instance = doConnect(buildOptions())
+		instance = doConnect(buildOptions()).Database("tasquest")
 	})
 	return instance
 }
@@ -35,13 +35,13 @@ func doConnect(options *options.ClientOptions) *mongo.Client {
 	client, err := mongo.Connect(context.TODO(), options)
 
 	if err != nil {
-		common.IrrecoverableFailure("Failed to connect to the database!", err)
+		server.IrrecoverableFailure("Failed to connect to the database!", err)
 	}
 
 	err = client.Ping(context.TODO(), nil)
 
 	if err != nil {
-		common.IrrecoverableFailure("Unreachable database!", err)
+		server.IrrecoverableFailure("Unreachable database!", err)
 	}
 
 	log.Info("Database connected at " + strings.Join(options.Hosts, ","))
@@ -57,7 +57,12 @@ func buildOptions() *options.ClientOptions {
 		Password: config.Password,
 	}
 
-	return options.Client().ApplyURI(config.Host).SetAppName("TasQuest").SetAuth(credentials).SetConnectTimeout(time.Duration(config.Timeout) * time.Second)
+	clientOptions := options.Client()
+	clientOptions = clientOptions.ApplyURI(config.Host)
+	clientOptions = clientOptions.SetAppName("TasQuest")
+	clientOptions = clientOptions.SetAuth(credentials)
+	clientOptions = clientOptions.SetConnectTimeout(time.Duration(config.Timeout) * time.Second)
+	return clientOptions
 }
 
 func readConfig() DBConfig {
@@ -72,7 +77,7 @@ func readConfig() DBConfig {
 	)
 
 	if err != nil {
-		common.IrrecoverableFailure("Failed to fetch the database config file", err)
+		server.IrrecoverableFailure("Failed to fetch the database config file", err)
 	}
 
 	return config
