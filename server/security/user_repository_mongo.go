@@ -1,14 +1,15 @@
 package security
 
 import (
+	"context"
 	"emperror.dev/errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
-	"tasquest.com/server/mongoutils"
 )
 
-var userRepositoryOnce sync.Once
+var IsUserRepositoryInstanced sync.Once
 var userRepositoryInstance *MongoUserRepository
 
 type MongoUserRepository struct {
@@ -16,25 +17,27 @@ type MongoUserRepository struct {
 }
 
 func ProvideMongoUserRepository(dbClient *mongo.Database) *MongoUserRepository {
-	userRepositoryOnce.Do(func() {
+	IsUserRepositoryInstanced.Do(func() {
 		userRepositoryInstance = &MongoUserRepository{collection: dbClient.Collection("users")}
 	})
 	return userRepositoryInstance
 }
 
 func (ur *MongoUserRepository) Save(user User) (User, error) {
-	insertResult, err := mongoutils.Save(ur.collection, user, User{})
+	savedTask, err := ur.collection.InsertOne(context.Background(), user)
 
 	if err != nil {
-		return User{}, errors.Wrap(ErrFailedToSaveUser, err.Error())
+		return User{}, errors.WithStack(err)
 	}
 
-	return insertResult.(User), nil
+	insertedID := savedTask.InsertedID.(primitive.ObjectID).String()
+
+	return ur.FindByID(insertedID)
 }
 
 func (ur *MongoUserRepository) FindByID(id string) (User, error) {
-	user, err := mongoutils.FindByID(ur.collection, id, User{})
-	return user.(User), err
+	objectID, _ := primitive.ObjectIDFromHex(id)
+	return ur.FindByFilter(bson.M{"_id": objectID})
 }
 
 func (ur *MongoUserRepository) FindByEmail(email string) (User, error) {
@@ -42,11 +45,13 @@ func (ur *MongoUserRepository) FindByEmail(email string) (User, error) {
 }
 
 func (ur *MongoUserRepository) FindByFilter(filter bson.M) (User, error) {
-	user, err := mongoutils.FindByFilter(ur.collection, filter, User{})
+	user := User{}
+	result := ur.collection.FindOne(context.Background(), filter)
+	err := result.Decode(&user)
 
 	if err != nil {
 		return User{}, errors.Wrap(ErrUserNotFound, err.Error())
 	}
 
-	return user.(User), nil
+	return user, nil
 }

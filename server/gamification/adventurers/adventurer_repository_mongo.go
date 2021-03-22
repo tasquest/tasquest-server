@@ -1,12 +1,12 @@
 package adventurers
 
 import (
+	"context"
 	"emperror.dev/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
-	"tasquest.com/server/mongoutils"
 )
 
 var IsMongoAdventurerRepositoryInstanced sync.Once
@@ -26,28 +26,32 @@ func ProvideMongoAdventurerRepository(dbClient *mongo.Database) *MongoAdventurer
 }
 
 func (repo *MongoAdventurerRepository) Save(adventurer Adventurer) (Adventurer, error) {
-	entity, err := mongoutils.Save(repo.collection, adventurer, Adventurer{})
-
-	if err != nil {
-		return Adventurer{}, errors.Wrap(ErrFailedToSaveAdventurer, err.Error())
-	}
-
-	return entity.(Adventurer), nil
-}
-
-func (repo *MongoAdventurerRepository) Update(adventurer Adventurer) (Adventurer, error) {
-	updated, err := mongoutils.Update(repo.collection, adventurer.ID, adventurer, Adventurer{})
+	insertResult, err := repo.collection.InsertOne(context.Background(), adventurer)
 
 	if err != nil {
 		return Adventurer{}, errors.WithStack(err)
 	}
 
-	return updated.(Adventurer), nil
+	insertedID := insertResult.InsertedID.(primitive.ObjectID).String()
+
+	return repo.FindByID(insertedID)
+}
+
+func (repo *MongoAdventurerRepository) Update(adventurer Adventurer) (Adventurer, error) {
+	insertResult, err := repo.collection.UpdateOne(context.Background(), bson.M{"_id": adventurer.ID}, adventurer)
+
+	if err != nil {
+		return Adventurer{}, errors.WithStack(err)
+	}
+
+	insertedID := insertResult.UpsertedID.(primitive.ObjectID).String()
+
+	return repo.FindByID(insertedID)
 }
 
 func (repo *MongoAdventurerRepository) FindByID(id string) (Adventurer, error) {
-	entity, err := mongoutils.FindByID(repo.collection, id, Adventurer{})
-	return entity.(Adventurer), err
+	objectID, _ := primitive.ObjectIDFromHex(id)
+	return repo.FindByFilter(bson.M{"_id": objectID})
 }
 
 func (repo *MongoAdventurerRepository) FindByUser(userID string) (Adventurer, error) {
@@ -56,11 +60,13 @@ func (repo *MongoAdventurerRepository) FindByUser(userID string) (Adventurer, er
 }
 
 func (repo *MongoAdventurerRepository) FindByFilter(filter bson.M) (Adventurer, error) {
-	entity, err := mongoutils.FindByFilter(repo.collection, filter, Adventurer{})
+	user := Adventurer{}
+	result := repo.collection.FindOne(context.Background(), filter)
+	err := result.Decode(&user)
 
 	if err != nil {
 		return Adventurer{}, errors.Wrap(ErrFailedToFetchAdventurer, err.Error())
 	}
 
-	return entity.(Adventurer), nil
+	return user, nil
 }

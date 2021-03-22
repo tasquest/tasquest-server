@@ -49,7 +49,19 @@ func (t *TaskManagerImpl) UpdateTask(taskID string, command UpdateTaskCommand) (
 }
 
 func (t *TaskManagerImpl) DeleteTask(taskID string) (Task, error) {
-	return t.taskRepository.DeleteByID(taskID)
+	task, err := t.taskRepository.FindByID(taskID)
+
+	if err != nil {
+		return Task{}, err
+	}
+
+	err = t.taskRepository.Delete(task)
+
+	if err != nil {
+		return Task{}, err
+	}
+
+	return task, nil
 }
 
 func (t *TaskManagerImpl) AdventurerCompletesTask(command AdventurerCompletedTaskCommand) error {

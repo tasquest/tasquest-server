@@ -4,13 +4,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"sync"
 	"tasquest.com/server/security"
 	"tasquest.com/tests/mocks"
 	"testing"
 )
 
 func TestRegisterUserSuccessfully(t *testing.T) {
+	security.IsUserManagementInstanced = sync.Once{}
 	userRepositoryMock := new(mocks.UserRepository)
+	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
 		Password:             "12345",
@@ -28,15 +32,16 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
 	userRepositoryMock.On("Save", mock.Anything).Return(expectedUser, nil).Once()
 
-	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
-
 	_, _ = userManagement.RegisterUser(command)
 
 	userRepositoryMock.AssertExpectations(t)
 }
 
 func TestUserAlreadyExists(t *testing.T) {
+	security.IsUserManagementInstanced = sync.Once{}
 	userRepositoryMock := new(mocks.UserRepository)
+	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
 		Password:             "12345",
@@ -53,8 +58,6 @@ func TestUserAlreadyExists(t *testing.T) {
 
 	userRepositoryMock.On("FindByEmail", command.Email).Return(existingUser, nil).Once()
 
-	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
-
 	_, err := userManagement.RegisterUser(command)
 
 	assert.NotNil(t, err)
@@ -64,7 +67,10 @@ func TestUserAlreadyExists(t *testing.T) {
 }
 
 func TestPasswordsNotMatching(t *testing.T) {
+	security.IsUserManagementInstanced = sync.Once{}
 	userRepositoryMock := new(mocks.UserRepository)
+	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
 		Password:             "12345",
@@ -72,8 +78,6 @@ func TestPasswordsNotMatching(t *testing.T) {
 	}
 
 	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
-
-	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	_, err := userManagement.RegisterUser(command)
 
@@ -84,12 +88,13 @@ func TestPasswordsNotMatching(t *testing.T) {
 }
 
 func TestFetchUserSuccessfully(t *testing.T) {
+	security.IsUserManagementInstanced = sync.Once{}
 	userRepositoryMock := new(mocks.UserRepository)
+	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+
 	anyID := "anyId"
 
 	userRepositoryMock.On("FindByID", anyID).Return(security.User{}, nil).Once()
-
-	userManagement := security.DefaultUserManagement{userRepository: userRepositoryMock}
 
 	usr, err := userManagement.FetchUser(anyID)
 

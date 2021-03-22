@@ -1,11 +1,12 @@
 package tasks
 
 import (
+	"context"
 	"emperror.dev/errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
-	"tasquest.com/server/mongoutils"
 )
 
 type MongoTaskRepository struct {
@@ -25,41 +26,56 @@ func ProvideMongoTaskRepository(dbClient *mongo.Database) *MongoTaskRepository {
 }
 
 func (repo *MongoTaskRepository) Save(task Task) (Task, error) {
-	savedTask, err := mongoutils.Save(repo.collection, task, Task{})
-	return savedTask.(Task), err
+	savedTask, err := repo.collection.InsertOne(context.Background(), task)
+
+	if err != nil {
+		return Task{}, errors.WithStack(err)
+	}
+
+	insertedID := savedTask.InsertedID.(primitive.ObjectID).String()
+
+	return repo.FindByID(insertedID)
 }
 
 func (repo *MongoTaskRepository) Update(task Task) (Task, error) {
-	updatedTask, err := mongoutils.Update(repo.collection, task.ID, task, Task{})
+	insertResult, err := repo.collection.UpdateOne(context.Background(), bson.M{"_id": task.ID}, task)
 
 	if err != nil {
 		return Task{}, errors.WithStack(err)
 	}
 
-	return updatedTask.(Task), nil
+	insertedID := insertResult.UpsertedID.(primitive.ObjectID).String()
+
+	return repo.FindByID(insertedID)
 }
 
-func (repo *MongoTaskRepository) Delete(task Task) (Task, error) {
-	_, err := mongoutils.Delete(repo.collection, task)
+func (repo *MongoTaskRepository) Delete(task Task) error {
+	return repo.DeleteByID(task.ID.String())
+}
+
+func (repo *MongoTaskRepository) DeleteByID(id string) error {
+	_, err := repo.collection.DeleteOne(context.Background(), bson.M{"_id": id})
 
 	if err != nil {
-		return Task{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
-	return task, nil
-}
-
-func (repo *MongoTaskRepository) DeleteByID(id string) (Task, error) {
-	deletedTask, err := mongoutils.DeleteByID(repo.collection, id, Task{})
-	return deletedTask.(Task), err
+	return nil
 }
 
 func (repo *MongoTaskRepository) FindByID(id string) (Task, error) {
-	task, err := mongoutils.FindByID(repo.collection, id, Task{})
-	return task.(Task), err
+	objectID, _ := primitive.ObjectIDFromHex(id)
+	return repo.FindByFilter(bson.M{"_id": objectID})
 }
 
 func (repo *MongoTaskRepository) FindByFilter(filter bson.M) (Task, error) {
-	task, err := mongoutils.FindByFilter(repo.collection, filter, Task{})
-	return task.(Task), err
+	task := Task{}
+	result := repo.collection.FindOne(context.Background(), filter)
+	err := result.Decode(&task)
+
+	if err != nil {
+		return Task{}, errors.Wrap(ErrFailedToFetchTask, err.Error())
+	}
+
+	return task, nil
 }

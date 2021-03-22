@@ -30,7 +30,7 @@ func (pm *DefaultAdventurerManager) CreateAdventurer(command CreateAdventurer) (
 	_, profErr := pm.FetchAdventurerForUser(command.UserID)
 
 	if profErr != nil {
-		return Adventurer{}, errors.Wrap(profErr, "Failed to fetch profile")
+		return Adventurer{}, errors.WithStack(profErr)
 	}
 
 	userID, _ := primitive.ObjectIDFromHex(command.UserID)
@@ -59,7 +59,7 @@ func (pm *DefaultAdventurerManager) FetchAdventurerForUser(userID string) (Adven
 	}
 
 	if err != nil {
-		return Adventurer{}, errors.Wrap(err, "Failed to fetch profile")
+		return Adventurer{}, errors.WithStack(err)
 	}
 
 	return existingProfile, nil

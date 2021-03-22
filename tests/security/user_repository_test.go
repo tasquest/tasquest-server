@@ -1,7 +1,6 @@
 package security
 
 import (
-	"context"
 	"github.com/orlangure/gnomock"
 	mongoPreset "github.com/orlangure/gnomock/preset/mongo"
 	"github.com/stretchr/testify/suite"
@@ -13,7 +12,7 @@ import (
 
 type UserRepositoryTestSuite struct {
 	suite.Suite
-	dbClient  *mongo.Client
+	dbClient  *mongo.Database
 	container *gnomock.Container
 }
 
@@ -26,13 +25,11 @@ func (suite *UserRepositoryTestSuite) SetupSuite() {
 	}
 
 	suite.container = container
-	suite.dbClient = utils.SetupMongo(container)
+	suite.dbClient = utils.SetupMongo(container).Database("tasquest")
 }
 
 func (suite *UserRepositoryTestSuite) TestCreateUser() {
-	userRepository := security.MongoUserRepository{
-		Collection: suite.dbClient.Database("tasquest").Collection("users"),
-	}
+	userRepository := security.ProvideMongoUserRepository(suite.dbClient)
 
 	userToCreate := security.User{
 		Email:     "a@a.com",
@@ -52,7 +49,6 @@ func (suite *UserRepositoryTestSuite) TestCreateUser() {
 
 func (suite *UserRepositoryTestSuite) TearDownSuite() {
 	_ = gnomock.Stop(suite.container)
-	suite.dbClient.Disconnect(context.TODO())
 }
 
 func TestRunUserRepositorySuite(t *testing.T) {

@@ -1,6 +1,6 @@
 module tasquest.com
 
-go 1.15
+go 1.16
 
 require (
 	emperror.dev/emperror v0.33.0
