@@ -4,14 +4,14 @@ import (
 	"emperror.dev/emperror"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"tasquest.com/server/api"
-	"tasquest.com/server/security"
+	"tasquest.com/server/application/security"
 	"tasquest.com/tests/mocks"
 	"testing"
 )
@@ -20,8 +20,9 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 	// Server Setup
 	api.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
-	userManagementMock := new(mocks.UserManagement)
-	api.ProvideAuthAPI(server, userManagementMock, emperror.NewTestHandler())
+	userService := new(mocks.UserService)
+	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	expectedUserId := uuid.MustParse("b2e02796-a051-11eb-b9ad-b42e99f46078")
 
 	// Command
 	command := security.RegisterUserCommand{
@@ -31,14 +32,14 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 	}
 
 	registeredUser := security.User{
-		ID:        primitive.ObjectID{},
+		ID:        expectedUserId,
 		Email:     "test@test.com",
 		Password:  "HASHEDPASSWORD",
 		Active:    false,
 		Providers: nil,
 	}
 
-	userManagementMock.On("RegisterUser", command).Return(registeredUser, nil)
+	userService.On("RegisterUser", command).Return(registeredUser, nil)
 
 	b, _ := json.Marshal(command)
 
@@ -50,7 +51,7 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 				{
    					"active":false,
    					"email":"test@test.com",
-   					"id":"000000000000000000000000",
+   					"id":"b2e02796-a051-11eb-b9ad-b42e99f46078",
    					"password":"HASHEDPASSWORD",
    					"providers":null
 				}
@@ -64,8 +65,8 @@ func TestRegisterUserMissingField(t *testing.T) {
 	// Server Setup
 	api.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
-	userManagementMock := new(mocks.UserManagement)
-	api.ProvideAuthAPI(server, userManagementMock, emperror.NewTestHandler())
+	userService := new(mocks.UserService)
+	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{
@@ -85,8 +86,8 @@ func TestRegisterUserMissingFields(t *testing.T) {
 	// Server Setup
 	api.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
-	userManagementMock := new(mocks.UserManagement)
-	api.ProvideAuthAPI(server, userManagementMock, emperror.NewTestHandler())
+	userService := new(mocks.UserService)
+	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{}
@@ -104,8 +105,8 @@ func TestRegisterUserSmallPassword(t *testing.T) {
 	// Server Setup
 	api.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
-	userManagementMock := new(mocks.UserManagement)
-	api.ProvideAuthAPI(server, userManagementMock, emperror.NewTestHandler())
+	userService := new(mocks.UserService)
+	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{
@@ -127,8 +128,8 @@ func TestRegisterUserInvalidEmail(t *testing.T) {
 	// Server Setup
 	api.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
-	userManagementMock := new(mocks.UserManagement)
-	api.ProvideAuthAPI(server, userManagementMock, emperror.NewTestHandler())
+	userService := new(mocks.UserService)
+	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{

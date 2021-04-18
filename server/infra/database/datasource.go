@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"strings"
 	"sync"
-	"tasquest.com/server"
+	"tasquest.com/server/commons"
 	"time"
 )
 
@@ -35,13 +35,13 @@ func doConnect(options *options.ClientOptions) *mongo.Client {
 	client, err := mongo.Connect(context.TODO(), options)
 
 	if err != nil {
-		server.IrrecoverableFailure("Failed to connect to the database!", err)
+		commons.IrrecoverableFailure("Failed to connect to the database!", err)
 	}
 
 	err = client.Ping(context.TODO(), nil)
 
 	if err != nil {
-		server.IrrecoverableFailure("Unreachable database!", err)
+		commons.IrrecoverableFailure("Unreachable database!", err)
 	}
 
 	log.Info("Database connected at " + strings.Join(options.Hosts, ","))
@@ -77,7 +77,7 @@ func readConfig() DBConfig {
 	)
 
 	if err != nil {
-		server.IrrecoverableFailure("Failed to fetch the database config file", err)
+		commons.IrrecoverableFailure("Failed to fetch the database config file", err)
 	}
 
 	return config

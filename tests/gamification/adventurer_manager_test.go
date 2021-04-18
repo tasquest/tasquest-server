@@ -1,12 +1,12 @@
 package gamification
 
 import (
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"sync"
-	"tasquest.com/server/gamification/adventurers"
-	"tasquest.com/server/security"
+	"tasquest.com/server/application/gamification/adventurers"
+	"tasquest.com/server/application/security"
 	"tasquest.com/tests/mocks"
 	"testing"
 	"time"
@@ -14,30 +14,30 @@ import (
 
 func TestCreateProfileSuccessfully(t *testing.T) {
 	adventurers.IsAdventurerManagerInstanced = sync.Once{}
-	adventurerRepository := new(mocks.AdventurerRepository)
-	userManagement := new(mocks.UserManagement)
-	adventurerManager := adventurers.ProvideDefaultAdventurerManager(adventurerRepository, userManagement)
+	adventurerFinder := new(mocks.AdventurerFinder)
+	adventurerPersistence := new(mocks.AdventurerPersistence)
+	userManagement := new(mocks.UserService)
+	adventurerManager := adventurers.NewAdventurerManager(adventurerFinder, adventurerPersistence, userManagement)
+	userId, _ := uuid.NewUUID()
+	adventurerId, _ := uuid.NewUUID()
 
 	command := adventurers.CreateAdventurer{
-		UserID:   "1",
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
 		Birthday: time.Now(),
 	}
 
-	userID, _ := primitive.ObjectIDFromHex("1")
-
 	adventurer := adventurers.Adventurer{
-		ID:       primitive.ObjectID{},
-		UserID:   userID,
+		ID:       adventurerId,
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
-		Birthday: primitive.NewDateTimeFromTime(command.Birthday),
+		Birthday: command.Birthday,
 	}
 
-	userManagement.On("FetchUser", "1").Return(security.User{}, nil)
-	adventurerRepository.On("FindByUser", "1").Return(adventurers.Adventurer{}, nil)
-	adventurerRepository.On("Save", mock.Anything).Return(adventurer, nil)
+	adventurerFinder.On("FindByUser", userId).Return(adventurers.Adventurer{}, nil)
+	adventurerPersistence.On("Save", mock.Anything).Return(adventurer, nil)
 
 	createdAdventurer, err := adventurerManager.CreateAdventurer(command)
 
@@ -45,24 +45,27 @@ func TestCreateProfileSuccessfully(t *testing.T) {
 	assert.NotNil(t, createdAdventurer)
 	assert.Equal(t, adventurer, createdAdventurer)
 
-	adventurerRepository.AssertExpectations(t)
+	adventurerFinder.AssertExpectations(t)
+	adventurerPersistence.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
 }
 
 func TestCreateAdventurerNoUser(t *testing.T) {
 	adventurers.IsAdventurerManagerInstanced = sync.Once{}
-	adventurerRepository := new(mocks.AdventurerRepository)
-	userManagement := new(mocks.UserManagement)
-	adventurerManager := adventurers.ProvideDefaultAdventurerManager(adventurerRepository, userManagement)
+	adventurerFinder := new(mocks.AdventurerFinder)
+	adventurerPersistence := new(mocks.AdventurerPersistence)
+	userManagement := new(mocks.UserService)
+	adventurerManager := adventurers.NewAdventurerManager(adventurerFinder, adventurerPersistence, userManagement)
+	userId, _ := uuid.NewUUID()
 
 	command := adventurers.CreateAdventurer{
-		UserID:   "1",
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
 		Birthday: time.Now(),
 	}
 
-	userManagement.On("FetchUser", "1").Return(security.User{}, security.ErrUserNotFound)
+	adventurerFinder.On("FindByUser", userId).Return(adventurers.Adventurer{}, security.ErrUserNotFound)
 
 	createdAdventurer, err := adventurerManager.CreateAdventurer(command)
 
@@ -70,35 +73,36 @@ func TestCreateAdventurerNoUser(t *testing.T) {
 	assert.Equal(t, security.ErrUserNotFound.Message, err.Error())
 	assert.Equal(t, adventurers.Adventurer{}, createdAdventurer)
 
-	adventurerRepository.AssertExpectations(t)
+	adventurerFinder.AssertExpectations(t)
+	adventurerPersistence.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
 }
 
 func TestCreateAdventurerAlreadyExists(t *testing.T) {
 	adventurers.IsAdventurerManagerInstanced = sync.Once{}
-	adventurerRepository := new(mocks.AdventurerRepository)
-	userManagement := new(mocks.UserManagement)
-	adventurerManager := adventurers.ProvideDefaultAdventurerManager(adventurerRepository, userManagement)
+	adventurerFinder := new(mocks.AdventurerFinder)
+	adventurerPersistence := new(mocks.AdventurerPersistence)
+	userManagement := new(mocks.UserService)
+	adventurerManager := adventurers.NewAdventurerManager(adventurerFinder, adventurerPersistence, userManagement)
+	userId, _ := uuid.NewUUID()
+	adventurerId, _ := uuid.NewUUID()
 
 	command := adventurers.CreateAdventurer{
-		UserID:   "1",
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
 		Birthday: time.Now(),
 	}
 
-	userID, _ := primitive.ObjectIDFromHex("1")
-
 	existingAdventurer := adventurers.Adventurer{
-		ID:       primitive.ObjectID{},
-		UserID:   userID,
+		ID:       adventurerId,
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
-		Birthday: 0,
+		Birthday: time.Now(),
 	}
 
-	userManagement.On("FetchUser", "1").Return(security.User{}, nil)
-	adventurerRepository.On("FindByUser", "1").Return(existingAdventurer, nil)
+	adventurerFinder.On("FindByUser", userId).Return(existingAdventurer, nil)
 
 	createdProfile, err := adventurerManager.CreateAdventurer(command)
 
@@ -106,25 +110,27 @@ func TestCreateAdventurerAlreadyExists(t *testing.T) {
 	assert.Equal(t, adventurers.ErrAdventurerAlreadyExists.Message, err.Error())
 	assert.Equal(t, adventurers.Adventurer{}, createdProfile)
 
-	adventurerRepository.AssertExpectations(t)
+	adventurerFinder.AssertExpectations(t)
+	adventurerPersistence.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
 }
 
 func TestCreateAdventurerFailedToFetchAdventurer(t *testing.T) {
 	adventurers.IsAdventurerManagerInstanced = sync.Once{}
-	adventurerRepository := new(mocks.AdventurerRepository)
-	userManagement := new(mocks.UserManagement)
-	adventurerManager := adventurers.ProvideDefaultAdventurerManager(adventurerRepository, userManagement)
+	adventurerFinder := new(mocks.AdventurerFinder)
+	adventurerPersistence := new(mocks.AdventurerPersistence)
+	userManagement := new(mocks.UserService)
+	adventurerManager := adventurers.NewAdventurerManager(adventurerFinder, adventurerPersistence, userManagement)
+	userId, _ := uuid.NewUUID()
 
 	command := adventurers.CreateAdventurer{
-		UserID:   "1",
+		UserID:   userId,
 		Name:     "Test",
 		Surname:  "Tester",
 		Birthday: time.Now(),
 	}
 
-	userManagement.On("FetchUser", "1").Return(security.User{}, nil)
-	adventurerRepository.On("FindByUser", "1").Return(adventurers.Adventurer{}, adventurers.ErrFailedToFetchAdventurer)
+	adventurerFinder.On("FindByUser", userId).Return(adventurers.Adventurer{}, adventurers.ErrFailedToFetchAdventurer)
 
 	createdAdventurer, err := adventurerManager.CreateAdventurer(command)
 
@@ -132,6 +138,7 @@ func TestCreateAdventurerFailedToFetchAdventurer(t *testing.T) {
 	assert.Equal(t, "An unexpected error occurred", err.Error())
 	assert.Equal(t, adventurers.Adventurer{}, createdAdventurer)
 
-	adventurerRepository.AssertExpectations(t)
+	adventurerFinder.AssertExpectations(t)
+	adventurerPersistence.AssertExpectations(t)
 	userManagement.AssertExpectations(t)
 }

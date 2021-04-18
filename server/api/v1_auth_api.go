@@ -3,22 +3,23 @@ package api
 import (
 	"emperror.dev/emperror"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"net/http"
 	"sync"
-	"tasquest.com/server"
-	"tasquest.com/server/security"
+	"tasquest.com/server/application/security"
+	"tasquest.com/server/commons"
 )
 
 type AuthAPI struct {
 	handler  emperror.ErrorHandler
 	router   *gin.Engine
-	security security.UserManagement
+	security security.UserService
 }
 
 var AuthAPIOnce sync.Once
 var instance *AuthAPI
 
-func ProvideAuthAPI(router *gin.Engine, security security.UserManagement, handler emperror.ErrorHandler) *AuthAPI {
+func ProvideAuthAPI(router *gin.Engine, security security.UserService, handler emperror.ErrorHandler) *AuthAPI {
 	AuthAPIOnce.Do(func() {
 		instance = &AuthAPI{router: router, security: security, handler: handler}
 		instance.registerApis()
@@ -36,7 +37,7 @@ func (auth *AuthAPI) registerUser(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&command); err != nil {
 		auth.handler.Handle(err)
-		c.JSON(http.StatusBadRequest, server.ApplicationError{
+		c.JSON(http.StatusBadRequest, commons.ApplicationError{
 			Title:   "Invalid Requisition",
 			Message: err.Error(),
 		})
@@ -47,7 +48,7 @@ func (auth *AuthAPI) registerUser(c *gin.Context) {
 
 	if err != nil {
 		auth.handler.Handle(err)
-		appErr, _ := server.ParseError(err)
+		appErr, _ := commons.ParseError(err)
 		c.JSON(appErr.HTTPCode, appErr)
 		return
 	}
@@ -56,12 +57,13 @@ func (auth *AuthAPI) registerUser(c *gin.Context) {
 }
 
 func (auth *AuthAPI) fetchUser(c *gin.Context) {
-	id := c.Param("id")
+	id := uuid.MustParse(c.Param("id"))
+
 	usr, err := auth.security.FetchUser(id)
 
 	if err != nil {
 		auth.handler.Handle(err)
-		appErr, _ := server.ParseError(err)
+		appErr, _ := commons.ParseError(err)
 		c.JSON(appErr.HTTPCode, appErr)
 		return
 	}

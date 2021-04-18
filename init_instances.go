@@ -7,57 +7,70 @@ import (
 	"github.com/google/wire"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
-	"tasquest.com/server"
+	"tasquest.com/server/adapters/output/databases/mongorepositories"
 	"tasquest.com/server/api"
-	"tasquest.com/server/gamification/adventurers"
-	"tasquest.com/server/gamification/tasks"
+	"tasquest.com/server/application/gamification/adventurers"
+	"tasquest.com/server/application/gamification/tasks"
+	"tasquest.com/server/application/security"
+	"tasquest.com/server/commons"
 	"tasquest.com/server/infra/database"
 	"tasquest.com/server/infra/web"
-	"tasquest.com/server/security"
 )
 
 /**************************
  *    Common Providers    *
  **************************/
-func loggerWireBuilder() *logrus.Logger {
-	wire.Build(server.ProvideLogger)
-	return &logrus.Logger{}
+func loggerWire() *logrus.Logger {
+	panic(
+		wire.Build(commons.ProvideLogger),
+	)
 }
 
 /**************************
  *    Infra Providers     *
  **************************/
-func databaseWireBuilder() *mongo.Database {
-	wire.Build(database.ProvideDatasource)
-	return &mongo.Database{}
+func databaseWire() *mongo.Database {
+	panic(
+		wire.Build(database.ProvideDatasource),
+	)
 }
 
-func webServerWireBuilder() *gin.Engine {
-	wire.Build(web.ProvideWebServer)
-	return &gin.Engine{}
+func webServerWire() *gin.Engine {
+	panic(
+		wire.Build(web.ProvideWebServer),
+	)
 }
 
 /**************************
  *    security Providers  *
  **************************/
-func userRepositoryWireBuilder() security.UserRepository {
+func userFinderWire() security.UserFinder {
 	panic(
 		wire.Build(
-			security.ProvideMongoUserRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(security.UserRepository), new(*security.MongoUserRepository)),
+			databaseWire,
+			mongorepositories.NewUserRepository,
+			wire.Bind(new(security.UserFinder), new(*mongorepositories.MongoUserRepository)),
 		),
 	)
 }
 
-func userManagementWireBuilder() security.UserManagement {
+func userPersistenceWire() security.UserPersistence {
 	panic(
 		wire.Build(
-			security.ProvideDefaultUserManagement,
-			security.ProvideMongoUserRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(security.UserRepository), new(*security.MongoUserRepository)),
-			wire.Bind(new(security.UserManagement), new(*security.DefaultUserManagement)),
+			databaseWire,
+			mongorepositories.NewUserRepository,
+			wire.Bind(new(security.UserPersistence), new(*mongorepositories.MongoUserRepository)),
+		),
+	)
+}
+
+func userServiceWire() security.UserService {
+	panic(
+		wire.Build(
+			userPersistenceWire,
+			userFinderWire,
+			security.NewUserManagement,
+			wire.Bind(new(security.UserService), new(*security.UserManagement)),
 		),
 	)
 }
@@ -65,28 +78,34 @@ func userManagementWireBuilder() security.UserManagement {
 /*****************************
  *    Adventurers Providers  *
  *****************************/
-func adventurerRepositoryWireBuilder() adventurers.AdventurerRepository {
+func adventurerFinderWire() adventurers.AdventurerFinder {
 	panic(
 		wire.Build(
-			adventurers.ProvideMongoAdventurerRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(adventurers.AdventurerRepository), new(*adventurers.MongoAdventurerRepository)),
+			databaseWire,
+			mongorepositories.NewMongoAdventurerRepository,
+			wire.Bind(new(adventurers.AdventurerFinder), new(*mongorepositories.MongoAdventurerRepository)),
 		),
 	)
 }
 
-func adventurerManagerWireBuilder() adventurers.AdventurerManager {
+func adventurerPersistenceWire() adventurers.AdventurerPersistence {
 	panic(
 		wire.Build(
-			adventurers.ProvideDefaultAdventurerManager,
-			security.ProvideDefaultUserManagement,
-			adventurers.ProvideMongoAdventurerRepository,
-			security.ProvideMongoUserRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(adventurers.AdventurerManager), new(*adventurers.DefaultAdventurerManager)),
-			wire.Bind(new(security.UserManagement), new(*security.DefaultUserManagement)),
-			wire.Bind(new(security.UserRepository), new(*security.MongoUserRepository)),
-			wire.Bind(new(adventurers.AdventurerRepository), new(*adventurers.MongoAdventurerRepository)),
+			databaseWire,
+			mongorepositories.NewMongoAdventurerRepository,
+			wire.Bind(new(adventurers.AdventurerPersistence), new(*mongorepositories.MongoAdventurerRepository)),
+		),
+	)
+}
+
+func adventurerServiceWire() adventurers.AdventurerService {
+	panic(
+		wire.Build(
+			userServiceWire,
+			adventurerFinderWire,
+			adventurerPersistenceWire,
+			adventurers.NewAdventurerManager,
+			wire.Bind(new(adventurers.AdventurerService), new(*adventurers.AdventurerManager)),
 		),
 	)
 }
@@ -94,32 +113,34 @@ func adventurerManagerWireBuilder() adventurers.AdventurerManager {
 /*****************************
  *      Task Providers       *
  *****************************/
-func taskRepositoryWireBuilder() tasks.TaskRepository {
+func taskFinderWire() tasks.TaskFinder {
 	panic(
 		wire.Build(
-			tasks.ProvideMongoTaskRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(tasks.TaskRepository), new(*tasks.MongoTaskRepository)),
+			databaseWire,
+			mongorepositories.ProvideMongoTaskRepository,
+			wire.Bind(new(tasks.TaskFinder), new(*mongorepositories.MongoTaskRepository)),
 		),
 	)
 }
 
-func taskManagerWireBuilder() tasks.TaskManager {
+func taskPersistenceWire() tasks.TaskPersistence {
 	panic(
 		wire.Build(
-			tasks.ProvideMongoTaskRepository,
-			tasks.ProvideDefaultTaskManager,
-			adventurers.ProvideDefaultAdventurerManager,
-			adventurers.ProvideMongoAdventurerRepository,
-			security.ProvideDefaultUserManagement,
-			security.ProvideMongoUserRepository,
-			database.ProvideDatasource,
-			wire.Bind(new(tasks.TaskRepository), new(*tasks.MongoTaskRepository)),
-			wire.Bind(new(tasks.TaskManager), new(*tasks.TaskManagerImpl)),
-			wire.Bind(new(adventurers.AdventurerManager), new(*adventurers.DefaultAdventurerManager)),
-			wire.Bind(new(security.UserManagement), new(*security.DefaultUserManagement)),
-			wire.Bind(new(security.UserRepository), new(*security.MongoUserRepository)),
-			wire.Bind(new(adventurers.AdventurerRepository), new(*adventurers.MongoAdventurerRepository)),
+			databaseWire,
+			mongorepositories.ProvideMongoTaskRepository,
+			wire.Bind(new(tasks.TaskPersistence), new(*mongorepositories.MongoTaskRepository)),
+		),
+	)
+}
+
+func taskServiceWire() tasks.TaskService {
+	panic(
+		wire.Build(
+			taskFinderWire,
+			taskPersistenceWire,
+			adventurerServiceWire,
+			tasks.NewTaskManager,
+			wire.Bind(new(tasks.TaskService), new(*tasks.TaskManager)),
 		),
 	)
 }
@@ -128,37 +149,37 @@ func taskManagerWireBuilder() tasks.TaskManager {
  *    Api Providers  *
  **************************/
 func authApiWireBuilder() *api.AuthAPI {
-	wire.Build(
-		api.ProvideAuthAPI,
-		web.ProvideWebServer,
-		database.ProvideDatasource,
-		server.ProvideErrorHandler,
-		server.ProvideLogger,
-		security.ProvideDefaultUserManagement,
-		security.ProvideMongoUserRepository,
-		wire.Bind(new(security.UserManagement), new(*security.DefaultUserManagement)),
-		wire.Bind(new(security.UserRepository), new(*security.MongoUserRepository)),
+	panic(
+		wire.Build(
+			web.ProvideWebServer,
+			commons.ProvideLogger,
+			commons.ProvideErrorHandler,
+			userServiceWire,
+			api.ProvideAuthAPI,
+		),
 	)
-	return &api.AuthAPI{}
 }
 
 // ########################## Initializer #########################
 
 func Bootstrap() {
 	// Common
-	loggerWireBuilder()
+	loggerWire()
 	// Infra
-	databaseWireBuilder()
-	webServerWireBuilder()
+	databaseWire()
+	webServerWire()
 	// security
-	userRepositoryWireBuilder()
-	userManagementWireBuilder()
+	userPersistenceWire()
+	userFinderWire()
+	userServiceWire()
 	// Adventurer
-	adventurerRepositoryWireBuilder()
-	adventurerManagerWireBuilder()
+	adventurerFinderWire()
+	adventurerPersistenceWire()
+	adventurerServiceWire()
 	// Tasks
-	taskRepositoryWireBuilder()
-	taskManagerWireBuilder()
-	// APIs
+	taskFinderWire()
+	taskPersistenceWire()
+	taskServiceWire()
+	// Apis
 	authApiWireBuilder()
 }

@@ -1,19 +1,21 @@
 package security
 
 import (
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"sync"
-	"tasquest.com/server/security"
+	"tasquest.com/server/application/security"
 	"tasquest.com/tests/mocks"
 	"testing"
 )
 
 func TestRegisterUserSuccessfully(t *testing.T) {
 	security.IsUserManagementInstanced = sync.Once{}
-	userRepositoryMock := new(mocks.UserRepository)
-	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+	userFinder := new(mocks.UserFinder)
+	userPersistence := new(mocks.UserPersistence)
+	userManagement := security.NewUserManagement(userFinder, userPersistence)
+	expectedUserId, _ := uuid.NewUUID()
 
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
@@ -22,25 +24,28 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 	}
 
 	expectedUser := security.User{
-		ID:        primitive.ObjectID{},
+		ID:        expectedUserId,
 		Email:     "test@test.com",
 		Password:  "BCRYPT",
 		Active:    false,
 		Providers: nil,
 	}
 
-	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
-	userRepositoryMock.On("Save", mock.Anything).Return(expectedUser, nil).Once()
+	userFinder.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
+	userPersistence.On("Save", mock.Anything).Return(expectedUser, nil).Once()
 
 	_, _ = userManagement.RegisterUser(command)
 
-	userRepositoryMock.AssertExpectations(t)
+	userFinder.AssertExpectations(t)
+	userPersistence.AssertExpectations(t)
 }
 
 func TestUserAlreadyExists(t *testing.T) {
 	security.IsUserManagementInstanced = sync.Once{}
-	userRepositoryMock := new(mocks.UserRepository)
-	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+	userFinder := new(mocks.UserFinder)
+	userPersistence := new(mocks.UserPersistence)
+	userManagement := security.NewUserManagement(userFinder, userPersistence)
+	existingUserId, _ := uuid.NewUUID()
 
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
@@ -49,27 +54,29 @@ func TestUserAlreadyExists(t *testing.T) {
 	}
 
 	existingUser := security.User{
-		ID:        primitive.ObjectID{},
+		ID:        existingUserId,
 		Email:     "test@test.com",
 		Password:  "BCRYPT",
 		Active:    false,
 		Providers: nil,
 	}
 
-	userRepositoryMock.On("FindByEmail", command.Email).Return(existingUser, nil).Once()
+	userFinder.On("FindByEmail", command.Email).Return(existingUser, nil).Once()
 
 	_, err := userManagement.RegisterUser(command)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, security.ErrUserAlreadyExists.Message, err.Error())
 
-	userRepositoryMock.AssertExpectations(t)
+	userFinder.AssertExpectations(t)
+	userPersistence.AssertExpectations(t)
 }
 
 func TestPasswordsNotMatching(t *testing.T) {
 	security.IsUserManagementInstanced = sync.Once{}
-	userRepositoryMock := new(mocks.UserRepository)
-	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+	userFinder := new(mocks.UserFinder)
+	userPersistence := new(mocks.UserPersistence)
+	userManagement := security.NewUserManagement(userFinder, userPersistence)
 
 	command := security.RegisterUserCommand{
 		Email:                "test@test.com",
@@ -77,29 +84,31 @@ func TestPasswordsNotMatching(t *testing.T) {
 		PasswordConfirmation: "123451",
 	}
 
-	userRepositoryMock.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
+	userFinder.On("FindByEmail", command.Email).Return(security.User{}, nil).Once()
 
 	_, err := userManagement.RegisterUser(command)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, security.ErrPasswordNotMatch.Message, err.Error())
 
-	userRepositoryMock.AssertExpectations(t)
+	userFinder.AssertExpectations(t)
+	userPersistence.AssertExpectations(t)
 }
 
 func TestFetchUserSuccessfully(t *testing.T) {
 	security.IsUserManagementInstanced = sync.Once{}
-	userRepositoryMock := new(mocks.UserRepository)
-	userManagement := security.ProvideDefaultUserManagement(userRepositoryMock)
+	userFinder := new(mocks.UserFinder)
+	userPersistence := new(mocks.UserPersistence)
+	userManagement := security.NewUserManagement(userFinder, userPersistence)
+	userId, _ := uuid.NewUUID()
 
-	anyID := "anyId"
+	userFinder.On("FindByID", userId).Return(security.User{}, nil).Once()
 
-	userRepositoryMock.On("FindByID", anyID).Return(security.User{}, nil).Once()
-
-	usr, err := userManagement.FetchUser(anyID)
+	usr, err := userManagement.FetchUser(userId)
 
 	assert.Nil(t, err)
 	assert.Equal(t, usr, security.User{})
 
-	userRepositoryMock.AssertExpectations(t)
+	userFinder.AssertExpectations(t)
+	userPersistence.AssertExpectations(t)
 }
