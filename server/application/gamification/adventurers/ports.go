@@ -2,13 +2,14 @@ package adventurers
 
 import (
 	"github.com/google/uuid"
+
 	"tasquest.com/server/commons"
 )
 
 type AdventurerService interface {
 	CreateAdventurer(command CreateAdventurer) (Adventurer, error)
 	UpdateAdventurer(adventurerID uuid.UUID, command UpdateAdventurer) (Adventurer, error)
-	UpdateExperience(command UpdateExperience) (Adventurer, error)
+	UpdateCharacter(adventurerID uuid.UUID, character Character) (Adventurer, error)
 }
 
 type AdventurerPersistence interface {

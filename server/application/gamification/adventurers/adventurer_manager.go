@@ -1,10 +1,12 @@
 package adventurers
 
 import (
+	"sync"
+
 	"emperror.dev/errors"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
-	"sync"
+
 	"tasquest.com/server/application/security"
 )
 
@@ -63,14 +65,6 @@ func (am *AdventurerManager) UpdateAdventurer(adventurerID uuid.UUID, command Up
 	return am.adventurerSaver.Update(adventurer)
 }
 
-func (am *AdventurerManager) UpdateExperience(command UpdateExperience) (Adventurer, error) {
-	adventurer, err := am.adventurerFinder.FindByID(command.AdventurerID)
-
-	if err != nil {
-		return Adventurer{}, errors.WithStack(err)
-	}
-
-	adventurer.Character.Experience += command.Experience
-
-	return am.adventurerSaver.Update(adventurer)
+func (am *AdventurerManager) UpdateCharacter(adventurerID uuid.UUID, character Character) (Adventurer, error) {
+	panic("implement me")
 }

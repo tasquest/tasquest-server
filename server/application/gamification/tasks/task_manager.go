@@ -1,27 +1,31 @@
 package tasks
 
 import (
+	"sync"
+
 	"emperror.dev/errors"
 	"github.com/google/uuid"
-	"sync"
+
 	"tasquest.com/server/application/gamification/adventurers"
+	"tasquest.com/server/infra/events"
 )
 
 type TaskManager struct {
-	adventurerManager adventurers.AdventurerService
-	taskPersister     TaskPersistence
-	taskFinder        TaskFinder
+	adventurerFinder adventurers.AdventurerFinder
+	taskPersistence  TaskPersistence
+	taskFinder       TaskFinder
+	eventPublisher   events.Publisher
 }
 
 var TaskManagerInstanced sync.Once
 var taskManagerInstance *TaskManager
 
-func NewTaskManager(finder TaskFinder, saver TaskPersistence, management adventurers.AdventurerService) *TaskManager {
+func NewTaskManager(finder TaskFinder, saver TaskPersistence, management adventurers.AdventurerFinder) *TaskManager {
 	TaskManagerInstanced.Do(func() {
 		taskManagerInstance = &TaskManager{
-			taskFinder:        finder,
-			taskPersister:     saver,
-			adventurerManager: management,
+			taskFinder:       finder,
+			taskPersistence:  saver,
+			adventurerFinder: management,
 		}
 	})
 	return taskManagerInstance
@@ -34,7 +38,7 @@ func (tm *TaskManager) CreateTask(command CreateTaskCommand) (Task, error) {
 		Experience:  command.Experience,
 	}
 
-	return tm.taskPersister.Save(task)
+	return tm.taskPersistence.Save(task)
 }
 
 func (tm *TaskManager) UpdateTask(taskID uuid.UUID, command UpdateTaskCommand) (Task, error) {
@@ -48,7 +52,7 @@ func (tm *TaskManager) UpdateTask(taskID uuid.UUID, command UpdateTaskCommand) (
 	task.Description = command.Description
 	task.Experience = command.Experience
 
-	return tm.taskPersister.Update(task)
+	return tm.taskPersistence.Update(task)
 }
 
 func (tm *TaskManager) DeleteTask(taskID uuid.UUID) (Task, error) {
@@ -58,7 +62,7 @@ func (tm *TaskManager) DeleteTask(taskID uuid.UUID) (Task, error) {
 		return Task{}, err
 	}
 
-	err = tm.taskPersister.Delete(task)
+	err = tm.taskPersistence.Delete(task)
 
 	if err != nil {
 		return Task{}, err
@@ -74,10 +78,17 @@ func (tm *TaskManager) AdventurerCompletesTask(command AdventurerCompletedTaskCo
 		return errors.WithStack(err)
 	}
 
-	_, err = tm.adventurerManager.UpdateExperience(adventurers.UpdateExperience{
-		AdventurerID: command.AdventurerID,
-		Experience:   task.Experience,
+	_, err = tm.adventurerFinder.FindByID(command.AdventurerID)
+
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	_, err = tm.eventPublisher.Publish(AdventurerTaskTopic, AdventurerCompletedTaskEvent{
+		AdventurerID:      command.AdventurerID,
+		TaskId:            command.TaskID,
+		ExperienceAwarded: task.Experience,
 	})
 
-	return err
+	return errors.WithStack(err)
 }

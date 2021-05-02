@@ -9,13 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
+	"tasquest.com/server/adapters/input/rest"
 	"tasquest.com/server/adapters/output/databases/mongorepositories"
-	"tasquest.com/server/api"
 	"tasquest.com/server/application/gamification/adventurers"
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
-	"tasquest.com/server/infra/database"
 	"tasquest.com/server/infra/web"
 )
 
@@ -33,7 +32,7 @@ func loggerWire() *logrus.Logger {
  *    Infra Providers     *
  **************************/
 func databaseWire() *mongo.Database {
-	mongoDatabase := database.ProvideDatasource()
+	mongoDatabase := mongorepositories.ProvideDatasource()
 	return mongoDatabase
 }
 
@@ -69,13 +68,13 @@ func userServiceWire() security.UserService {
  *****************************/
 func adventurerFinderWire() adventurers.AdventurerFinder {
 	mongoDatabase := databaseWire()
-	mongoAdventurerRepository := mongorepositories.NewMongoAdventurerRepository(mongoDatabase)
+	mongoAdventurerRepository := mongorepositories.NewAdventurerRepository(mongoDatabase)
 	return mongoAdventurerRepository
 }
 
 func adventurerPersistenceWire() adventurers.AdventurerPersistence {
 	mongoDatabase := databaseWire()
-	mongoAdventurerRepository := mongorepositories.NewMongoAdventurerRepository(mongoDatabase)
+	mongoAdventurerRepository := mongorepositories.NewAdventurerRepository(mongoDatabase)
 	return mongoAdventurerRepository
 }
 
@@ -92,13 +91,13 @@ func adventurerServiceWire() adventurers.AdventurerService {
  *****************************/
 func taskFinderWire() tasks.TaskFinder {
 	mongoDatabase := databaseWire()
-	mongoTaskRepository := mongorepositories.ProvideMongoTaskRepository(mongoDatabase)
+	mongoTaskRepository := mongorepositories.NewTaskRepository(mongoDatabase)
 	return mongoTaskRepository
 }
 
 func taskPersistenceWire() tasks.TaskPersistence {
 	mongoDatabase := databaseWire()
-	mongoTaskRepository := mongorepositories.ProvideMongoTaskRepository(mongoDatabase)
+	mongoTaskRepository := mongorepositories.NewTaskRepository(mongoDatabase)
 	return mongoTaskRepository
 }
 
@@ -113,12 +112,12 @@ func taskServiceWire() tasks.TaskService {
 /**************************
  *    Api Providers  *
  **************************/
-func authApiWireBuilder() *api.AuthAPI {
+func authApiWireBuilder() *rest.AuthAPI {
 	engine := web.ProvideWebServer()
 	userService := userServiceWire()
 	logger := commons.ProvideLogger()
 	errorHandler := commons.ProvideErrorHandler(logger)
-	authAPI := api.ProvideAuthAPI(engine, userService, errorHandler)
+	authAPI := rest.NewAuthApi(engine, userService, errorHandler)
 	return authAPI
 }
 

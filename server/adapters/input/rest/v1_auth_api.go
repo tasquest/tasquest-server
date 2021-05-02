@@ -1,11 +1,13 @@
-package api
+package rest
 
 import (
+	"net/http"
+	"sync"
+
 	"emperror.dev/emperror"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"net/http"
-	"sync"
+
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
 )
@@ -19,7 +21,7 @@ type AuthAPI struct {
 var AuthAPIOnce sync.Once
 var instance *AuthAPI
 
-func ProvideAuthAPI(router *gin.Engine, security security.UserService, handler emperror.ErrorHandler) *AuthAPI {
+func NewAuthApi(router *gin.Engine, security security.UserService, handler emperror.ErrorHandler) *AuthAPI {
 	AuthAPIOnce.Do(func() {
 		instance = &AuthAPI{router: router, security: security, handler: handler}
 		instance.registerApis()

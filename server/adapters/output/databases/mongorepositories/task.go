@@ -2,32 +2,34 @@ package mongorepositories
 
 import (
 	"context"
+	"sync"
+
 	"emperror.dev/errors"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"sync"
+
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/commons"
 )
 
-type MongoTaskRepository struct {
+type TaskRepository struct {
 	collection *mongo.Collection
 }
 
 var IsMongoTaskRepositoryInstanced sync.Once
-var mongoTaskRepositoryInstance *MongoTaskRepository
+var mongoTaskRepositoryInstance *TaskRepository
 
-func ProvideMongoTaskRepository(dbClient *mongo.Database) *MongoTaskRepository {
+func NewTaskRepository(dbClient *mongo.Database) *TaskRepository {
 	IsMongoTaskRepositoryInstanced.Do(func() {
-		mongoTaskRepositoryInstance = &MongoTaskRepository{
+		mongoTaskRepositoryInstance = &TaskRepository{
 			collection: dbClient.Collection("tasks"),
 		}
 	})
 	return mongoTaskRepositoryInstance
 }
 
-func (repo *MongoTaskRepository) Save(task tasks.Task) (tasks.Task, error) {
+func (repo *TaskRepository) Save(task tasks.Task) (tasks.Task, error) {
 	savedTask, err := repo.collection.InsertOne(context.Background(), task)
 
 	if err != nil {
@@ -39,7 +41,7 @@ func (repo *MongoTaskRepository) Save(task tasks.Task) (tasks.Task, error) {
 	return repo.FindByID(insertedID)
 }
 
-func (repo *MongoTaskRepository) Update(task tasks.Task) (tasks.Task, error) {
+func (repo *TaskRepository) Update(task tasks.Task) (tasks.Task, error) {
 	insertResult, err := repo.collection.UpdateOne(context.Background(), bson.M{"_id": task.ID}, task)
 
 	if err != nil {
@@ -51,11 +53,11 @@ func (repo *MongoTaskRepository) Update(task tasks.Task) (tasks.Task, error) {
 	return repo.FindByID(insertedID)
 }
 
-func (repo *MongoTaskRepository) Delete(task tasks.Task) error {
+func (repo *TaskRepository) Delete(task tasks.Task) error {
 	return repo.DeleteByID(task.ID)
 }
 
-func (repo *MongoTaskRepository) DeleteByID(id uuid.UUID) error {
+func (repo *TaskRepository) DeleteByID(id uuid.UUID) error {
 	_, err := repo.collection.DeleteOne(context.Background(), bson.M{"_id": id})
 
 	if err != nil {
@@ -65,11 +67,11 @@ func (repo *MongoTaskRepository) DeleteByID(id uuid.UUID) error {
 	return nil
 }
 
-func (repo *MongoTaskRepository) FindByID(id uuid.UUID) (tasks.Task, error) {
+func (repo *TaskRepository) FindByID(id uuid.UUID) (tasks.Task, error) {
 	return repo.FindByFilter(commons.Map{"_id": id})
 }
 
-func (repo *MongoTaskRepository) FindByFilter(filter commons.Map) (tasks.Task, error) {
+func (repo *TaskRepository) FindByFilter(filter commons.Map) (tasks.Task, error) {
 	task := tasks.Task{}
 	result := repo.collection.FindOne(context.Background(), filter)
 	err := result.Decode(&task)

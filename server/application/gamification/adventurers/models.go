@@ -1,9 +1,11 @@
 package adventurers
 
 import (
-	"github.com/google/uuid"
-	"tasquest.com/server/application/gamification/equipments"
 	"time"
+
+	"github.com/google/uuid"
+
+	"tasquest.com/server/application/gamification/equipments"
 )
 
 type Adventurer struct {
@@ -16,17 +18,31 @@ type Adventurer struct {
 }
 
 type Character struct {
-	ID         uuid.UUID          `json:"id" bson:"_id"`
-	CharName   string             `json:"charName" bson:"char_name"`
-	Title      string             `json:"title" bson:"title"`
-	Level      int                `json:"level" bson:"level"`
-	Experience int64              `json:"experience" bson:"experience"`
-	Equipment  CharacterEquipment `json:"equipments" bson:"equipments"`
-	Guilds     []uuid.UUID        `json:"guilds" bson:"guilds"`
+	AdventurerID uuid.UUID          `json:"adventurerId" bson:"adventurer_id"`
+	CharName     string             `json:"charName" bson:"char_name"`
+	Title        string             `json:"title" bson:"title"`
+	Level        int                `json:"level" bson:"level"`
+	Experience   int64              `json:"leveling" bson:"leveling"`
+	Equipment    CharacterEquipment `json:"equipments" bson:"equipments"`
+	Guilds       []uuid.UUID        `json:"guilds" bson:"guilds"`
+}
+
+func (char Character) NewLevel(level int) Character {
+	char.Level = level
+	return char
+}
+
+func (char Character) IncreaseExperience(experience int64) Character {
+	char.Experience += experience
+	return char
+}
+
+func (char Character) DecreaseExperience(experience int64) Character {
+	char.Experience -= experience
+	return char
 }
 
 type CharacterEquipment struct {
-	ID        uuid.UUID            `json:"id" bson:"_id"`
 	Head      equipments.Equipment `json:"head" bson:"head"`
 	Torso     equipments.Equipment `json:"torso" bson:"torso"`
 	LeftHand  equipments.Equipment `json:"leftHand" bson:"left_hand"`

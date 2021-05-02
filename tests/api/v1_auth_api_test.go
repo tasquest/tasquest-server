@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
-	"tasquest.com/server/api"
+	"tasquest.com/server/adapters/input/rest"
 	"tasquest.com/server/application/security"
 	"tasquest.com/tests/mocks"
 	"testing"
@@ -18,10 +18,10 @@ import (
 
 func TestRegisterUserSuccessfully(t *testing.T) {
 	// Server Setup
-	api.AuthAPIOnce = sync.Once{}
+	rest.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
 	userService := new(mocks.UserService)
-	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	rest.NewAuthApi(server, userService, emperror.NewTestHandler())
 	expectedUserId := uuid.MustParse("b2e02796-a051-11eb-b9ad-b42e99f46078")
 
 	// Command
@@ -63,10 +63,10 @@ func TestRegisterUserSuccessfully(t *testing.T) {
 
 func TestRegisterUserMissingField(t *testing.T) {
 	// Server Setup
-	api.AuthAPIOnce = sync.Once{}
+	rest.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
 	userService := new(mocks.UserService)
-	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	rest.NewAuthApi(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{
@@ -84,10 +84,10 @@ func TestRegisterUserMissingField(t *testing.T) {
 
 func TestRegisterUserMissingFields(t *testing.T) {
 	// Server Setup
-	api.AuthAPIOnce = sync.Once{}
+	rest.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
 	userService := new(mocks.UserService)
-	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	rest.NewAuthApi(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{}
@@ -103,10 +103,10 @@ func TestRegisterUserMissingFields(t *testing.T) {
 
 func TestRegisterUserSmallPassword(t *testing.T) {
 	// Server Setup
-	api.AuthAPIOnce = sync.Once{}
+	rest.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
 	userService := new(mocks.UserService)
-	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	rest.NewAuthApi(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{
@@ -126,10 +126,10 @@ func TestRegisterUserSmallPassword(t *testing.T) {
 
 func TestRegisterUserInvalidEmail(t *testing.T) {
 	// Server Setup
-	api.AuthAPIOnce = sync.Once{}
+	rest.AuthAPIOnce = sync.Once{}
 	server := gin.Default()
 	userService := new(mocks.UserService)
-	api.ProvideAuthAPI(server, userService, emperror.NewTestHandler())
+	rest.NewAuthApi(server, userService, emperror.NewTestHandler())
 
 	// Command
 	command := security.RegisterUserCommand{

@@ -5,13 +5,13 @@ import "github.com/google/uuid"
 type CreateTaskCommand struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	Experience  int64  `json:"experience" binding:"required"`
+	Experience  int64  `json:"leveling" binding:"required"`
 }
 
 type UpdateTaskCommand struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	Experience  int64  `json:"experience" binding:"required"`
+	Experience  int64  `json:"leveling" binding:"required"`
 }
 
 type AdventurerCompletedTaskCommand struct {

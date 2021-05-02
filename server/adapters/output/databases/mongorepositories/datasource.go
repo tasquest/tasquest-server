@@ -1,15 +1,17 @@
-package database
+package mongorepositories
 
 import (
 	"context"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/kkyr/fig"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strings"
-	"sync"
+
 	"tasquest.com/server/commons"
-	"time"
 )
 
 type DBConfig struct {

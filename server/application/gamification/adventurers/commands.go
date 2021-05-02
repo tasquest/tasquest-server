@@ -1,8 +1,9 @@
 package adventurers
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CreateAdventurer struct {
@@ -18,7 +19,3 @@ type UpdateAdventurer struct {
 	Birthday time.Time `json:"birthday" binding:"required,datetime"`
 }
 
-type UpdateExperience struct {
-	AdventurerID uuid.UUID `json:"adventurerId" binding:"required"`
-	Experience   int64     `json:"experience" binding:"required"`
-}
