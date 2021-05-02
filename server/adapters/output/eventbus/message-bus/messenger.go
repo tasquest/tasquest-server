@@ -18,7 +18,7 @@ type Messenger struct {
 type MessageSubscription struct {
 	bus   messagebus.MessageBus
 	topic string
-	exec  func()
+	exec  interface{}
 }
 
 func NewMessenger() *Messenger {
@@ -33,7 +33,7 @@ func (m Messenger) Publish(topic string, event interface{}) (interface{}, error)
 	return event, nil
 }
 
-func (m Messenger) Subscribe(topic string, exec func()) (events.Subscription, error) {
+func (m Messenger) Subscribe(topic string, exec interface{}) (events.Subscription, error) {
 	err := m.bus.Subscribe(topic, exec)
 	return MessageSubscription{
 		bus:   m.bus,

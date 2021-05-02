@@ -79,7 +79,7 @@ func (pm ProgressionManagement) AwardExperience(command AwardExperience) error {
 	}
 
 	character := adventurer.Character.IncreaseExperience(command.Experience)
-	character, err = pm.checkCharacterProgression(character)
+	character, err = pm.checkCharacterProgression(command.AdventurerID, character)
 
 	if err != nil {
 		return errors.WithStack(err)
@@ -94,7 +94,9 @@ func (pm ProgressionManagement) AwardExperience(command AwardExperience) error {
 	return nil
 }
 
-func (pm ProgressionManagement) checkCharacterProgression(character adventurers.Character) (adventurers.Character, error) {
+// Helper Functions
+
+func (pm ProgressionManagement) checkCharacterProgression(adventurerId uuid.UUID, character adventurers.Character) (adventurers.Character, error) {
 	experience, err := pm.progressionFinder.FindLevelByExperience(character.Experience)
 
 	if err != nil {
@@ -103,7 +105,7 @@ func (pm ProgressionManagement) checkCharacterProgression(character adventurers.
 
 	if experience.Level != character.Level {
 		_, err := pm.publisher.Publish(AdventurerLevelingTopic, AdventurerLevelingEvent{
-			AdventurerID: character.AdventurerID,
+			AdventurerID: adventurerId,
 			OldLevel:     character.Level,
 			NewLevel:     experience.Level,
 		})
@@ -118,8 +120,6 @@ func (pm ProgressionManagement) checkCharacterProgression(character adventurers.
 	return character, nil
 }
 
-// Helper Functions
-
 func (pm ProgressionManagement) checkIfExperienceOverlaps(command CreateLevel) error {
 	if existingLevel, err := pm.progressionFinder.FindLevelByExperience(command.FromExp); err != nil {
 		return errors.WithStack(err)
@@ -133,18 +133,14 @@ func (pm ProgressionManagement) checkIfLevelExists(command CreateLevel) error {
 	if existingLevel, err := pm.progressionFinder.FindLevelInformation(command.Level); err != nil {
 		return errors.WithStack(err)
 	} else if !cmp.Equal(existingLevel, ExpLevel{}) {
-		return errors.WithStack(LevelAlreadyExistsError)
+		return errors.WithStack(ErrLevelAlreadyExists)
 	}
 	return nil
 }
 
 func (pm ProgressionManagement) validateExperience(command CreateLevel) error {
 	if command.FromExp > command.ToExp {
-		return errors.WithStack(FromExpCannotBeHigherThanToExpError)
-	}
-
-	if command.ToExp < command.FromExp {
-		return errors.WithStack(ToExpCannotBeLowerThanFromExpError)
+		return errors.WithStack(ErrFromExpCannotBeHigherThanToExp)
 	}
 	return nil
 }

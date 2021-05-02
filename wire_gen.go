@@ -118,7 +118,8 @@ func taskServiceWire() tasks.TaskService {
 	taskFinder := taskFinderWire()
 	taskPersistence := taskPersistenceWire()
 	adventurerFinder := adventurerFinderWire()
-	taskManager := tasks.NewTaskManager(taskFinder, taskPersistence, adventurerFinder)
+	publisher := eventPublisherWire()
+	taskManager := tasks.NewTaskManager(taskFinder, taskPersistence, adventurerFinder, publisher)
 	return taskManager
 }
 

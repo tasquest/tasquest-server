@@ -18,7 +18,6 @@ type Adventurer struct {
 }
 
 type Character struct {
-	AdventurerID uuid.UUID          `json:"adventurerId" bson:"adventurer_id"`
 	CharName     string             `json:"charName" bson:"char_name"`
 	Title        string             `json:"title" bson:"title"`
 	Level        int                `json:"level" bson:"level"`

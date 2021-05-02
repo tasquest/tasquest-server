@@ -6,26 +6,20 @@ import (
 	"tasquest.com/server/commons"
 )
 
-var FromExpCannotBeHigherThanToExpError = commons.ApplicationError{
+var ErrFromExpCannotBeHigherThanToExp = commons.ApplicationError{
 	HTTPCode: http.StatusBadRequest,
-	Title:    "Failed to save the adventurer",
-	Message:  "It was not possible to save the informed adventurer",
+	Title:    "Failed to save level information",
+	Message:  "The 'From' experience can't be higher than the 'To' experience.",
 }
 
-var ToExpCannotBeLowerThanFromExpError = commons.ApplicationError{
-	HTTPCode: http.StatusBadRequest,
-	Title:    "Failed to save the adventurer",
-	Message:  "It was not possible to save the informed adventurer",
-}
-
-var LevelAlreadyExistsError = commons.ApplicationError{
+var ErrLevelAlreadyExists = commons.ApplicationError{
 	HTTPCode: http.StatusConflict,
-	Title:    "a",
-	Message:  "a",
+	Title:    "Failed to save level information",
+	Message:  "The informed level already exists",
 }
 
 var ErrExperienceOverlaps = commons.ApplicationError{
 	HTTPCode: http.StatusConflict,
-	Title:    "a",
-	Message:  "a",
+	Title:    "Failed to save level information",
+	Message:  "There is already a level registered between the informed experience range",
 }

@@ -9,5 +9,5 @@ type Subscription interface {
 }
 
 type Subscriber interface {
-	Subscribe(topic string, exec func()) (Subscription, error)
+	Subscribe(topic string, exec interface{}) (Subscription, error)
 }

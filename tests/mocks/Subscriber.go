@@ -13,11 +13,11 @@ type Subscriber struct {
 }
 
 // Subscribe provides a mock function with given fields: topic, exec
-func (_m *Subscriber) Subscribe(topic string, exec func()) (events.Subscription, error) {
+func (_m *Subscriber) Subscribe(topic string, exec interface{}) (events.Subscription, error) {
 	ret := _m.Called(topic, exec)
 
 	var r0 events.Subscription
-	if rf, ok := ret.Get(0).(func(string, func()) events.Subscription); ok {
+	if rf, ok := ret.Get(0).(func(string, interface{}) events.Subscription); ok {
 		r0 = rf(topic, exec)
 	} else {
 		if ret.Get(0) != nil {
@@ -26,7 +26,7 @@ func (_m *Subscriber) Subscribe(topic string, exec func()) (events.Subscription,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, func()) error); ok {
+	if rf, ok := ret.Get(1).(func(string, interface{}) error); ok {
 		r1 = rf(topic, exec)
 	} else {
 		r1 = ret.Error(1)

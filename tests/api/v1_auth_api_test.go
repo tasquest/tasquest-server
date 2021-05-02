@@ -1,19 +1,21 @@
 package api
 
 import (
-	"emperror.dev/emperror"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"testing"
+
+	"emperror.dev/emperror"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+
 	"tasquest.com/server/adapters/input/rest"
 	"tasquest.com/server/application/security"
 	"tasquest.com/tests/mocks"
-	"testing"
 )
 
 func TestRegisterUserSuccessfully(t *testing.T) {

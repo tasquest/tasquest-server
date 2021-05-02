@@ -20,12 +20,18 @@ type TaskManager struct {
 var TaskManagerInstanced sync.Once
 var taskManagerInstance *TaskManager
 
-func NewTaskManager(finder TaskFinder, saver TaskPersistence, management adventurers.AdventurerFinder) *TaskManager {
+func NewTaskManager(
+	finder TaskFinder,
+	saver TaskPersistence,
+	management adventurers.AdventurerFinder,
+	eventPublisher events.Publisher,
+) *TaskManager {
 	TaskManagerInstanced.Do(func() {
 		taskManagerInstance = &TaskManager{
 			taskFinder:       finder,
 			taskPersistence:  saver,
 			adventurerFinder: management,
+			eventPublisher:   eventPublisher,
 		}
 	})
 	return taskManagerInstance

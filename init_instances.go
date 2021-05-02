@@ -160,6 +160,7 @@ func taskServiceWire() tasks.TaskService {
 			taskFinderWire,
 			taskPersistenceWire,
 			adventurerFinderWire,
+			eventPublisherWire,
 			tasks.NewTaskManager,
 			wire.Bind(new(tasks.TaskService), new(*tasks.TaskManager)),
 		),
