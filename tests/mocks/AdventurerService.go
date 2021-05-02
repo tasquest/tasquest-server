@@ -56,20 +56,20 @@ func (_m *AdventurerService) UpdateAdventurer(adventurerID uuid.UUID, command ad
 	return r0, r1
 }
 
-// UpdateExperience provides a mock function with given fields: command
-func (_m *AdventurerService) UpdateExperience(command adventurers.UpdateExperience) (adventurers.Adventurer, error) {
-	ret := _m.Called(command)
+// UpdateCharacter provides a mock function with given fields: adventurerID, character
+func (_m *AdventurerService) UpdateCharacter(adventurerID uuid.UUID, character adventurers.Character) (adventurers.Adventurer, error) {
+	ret := _m.Called(adventurerID, character)
 
 	var r0 adventurers.Adventurer
-	if rf, ok := ret.Get(0).(func(adventurers.UpdateExperience) adventurers.Adventurer); ok {
-		r0 = rf(command)
+	if rf, ok := ret.Get(0).(func(uuid.UUID, adventurers.Character) adventurers.Adventurer); ok {
+		r0 = rf(adventurerID, character)
 	} else {
 		r0 = ret.Get(0).(adventurers.Adventurer)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(adventurers.UpdateExperience) error); ok {
-		r1 = rf(command)
+	if rf, ok := ret.Get(1).(func(uuid.UUID, adventurers.Character) error); ok {
+		r1 = rf(adventurerID, character)
 	} else {
 		r1 = ret.Error(1)
 	}

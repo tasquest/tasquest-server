@@ -11,10 +11,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"tasquest.com/server/adapters/input/rest"
 	"tasquest.com/server/adapters/output/databases/mongorepositories"
+	"tasquest.com/server/adapters/output/eventbus/message-bus"
 	"tasquest.com/server/application/gamification/adventurers"
+	"tasquest.com/server/application/gamification/leveling"
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
+	"tasquest.com/server/infra/events"
 	"tasquest.com/server/infra/web"
 )
 
@@ -32,8 +35,8 @@ func loggerWire() *logrus.Logger {
  *    Infra Providers     *
  **************************/
 func databaseWire() *mongo.Database {
-	mongoDatabase := mongorepositories.ProvideDatasource()
-	return mongoDatabase
+	database := mongorepositories.ProvideDatasource()
+	return database
 }
 
 func webServerWire() *gin.Engine {
@@ -41,19 +44,29 @@ func webServerWire() *gin.Engine {
 	return engine
 }
 
+func eventPublisherWire() events.Publisher {
+	messenger := message_bus.NewMessenger()
+	return messenger
+}
+
+func eventSubscriberWire() events.Subscriber {
+	messenger := message_bus.NewMessenger()
+	return messenger
+}
+
 /**************************
  *    security Providers  *
  **************************/
 func userFinderWire() security.UserFinder {
-	mongoDatabase := databaseWire()
-	mongoUserRepository := mongorepositories.NewUserRepository(mongoDatabase)
-	return mongoUserRepository
+	database := databaseWire()
+	userRepository := mongorepositories.NewUserRepository(database)
+	return userRepository
 }
 
 func userPersistenceWire() security.UserPersistence {
-	mongoDatabase := databaseWire()
-	mongoUserRepository := mongorepositories.NewUserRepository(mongoDatabase)
-	return mongoUserRepository
+	database := databaseWire()
+	userRepository := mongorepositories.NewUserRepository(database)
+	return userRepository
 }
 
 func userServiceWire() security.UserService {
@@ -67,15 +80,15 @@ func userServiceWire() security.UserService {
  *    Adventurers Providers  *
  *****************************/
 func adventurerFinderWire() adventurers.AdventurerFinder {
-	mongoDatabase := databaseWire()
-	mongoAdventurerRepository := mongorepositories.NewAdventurerRepository(mongoDatabase)
-	return mongoAdventurerRepository
+	database := databaseWire()
+	adventurerRepository := mongorepositories.NewAdventurerRepository(database)
+	return adventurerRepository
 }
 
 func adventurerPersistenceWire() adventurers.AdventurerPersistence {
-	mongoDatabase := databaseWire()
-	mongoAdventurerRepository := mongorepositories.NewAdventurerRepository(mongoDatabase)
-	return mongoAdventurerRepository
+	database := databaseWire()
+	adventurerRepository := mongorepositories.NewAdventurerRepository(database)
+	return adventurerRepository
 }
 
 func adventurerServiceWire() adventurers.AdventurerService {
@@ -90,23 +103,45 @@ func adventurerServiceWire() adventurers.AdventurerService {
  *      Task Providers       *
  *****************************/
 func taskFinderWire() tasks.TaskFinder {
-	mongoDatabase := databaseWire()
-	mongoTaskRepository := mongorepositories.NewTaskRepository(mongoDatabase)
-	return mongoTaskRepository
+	database := databaseWire()
+	taskRepository := mongorepositories.NewTaskRepository(database)
+	return taskRepository
 }
 
 func taskPersistenceWire() tasks.TaskPersistence {
-	mongoDatabase := databaseWire()
-	mongoTaskRepository := mongorepositories.NewTaskRepository(mongoDatabase)
-	return mongoTaskRepository
+	database := databaseWire()
+	taskRepository := mongorepositories.NewTaskRepository(database)
+	return taskRepository
 }
 
 func taskServiceWire() tasks.TaskService {
 	taskFinder := taskFinderWire()
 	taskPersistence := taskPersistenceWire()
-	adventurerService := adventurerServiceWire()
-	taskManager := tasks.NewTaskManager(taskFinder, taskPersistence, adventurerService)
+	adventurerFinder := adventurerFinderWire()
+	taskManager := tasks.NewTaskManager(taskFinder, taskPersistence, adventurerFinder)
 	return taskManager
+}
+
+func progressionFinderWire() leveling.ProgressionFinder {
+	database := databaseWire()
+	progressionRepository := mongorepositories.NewProgressionRepository(database)
+	return progressionRepository
+}
+
+func progressionPersistenceWire() leveling.ProgressionPersistence {
+	database := databaseWire()
+	progressionRepository := mongorepositories.NewProgressionRepository(database)
+	return progressionRepository
+}
+
+func progressionServiceWire() leveling.ProgressionService {
+	progressionFinder := progressionFinderWire()
+	progressionPersistence := progressionPersistenceWire()
+	adventurerService := adventurerServiceWire()
+	adventurerFinder := adventurerFinderWire()
+	publisher := eventPublisherWire()
+	progressionManagement := leveling.NewProgressionManagement(progressionFinder, progressionPersistence, adventurerService, adventurerFinder, publisher)
+	return progressionManagement
 }
 
 /**************************
@@ -129,6 +164,8 @@ func Bootstrap() {
 
 	databaseWire()
 	webServerWire()
+	eventPublisherWire()
+	eventSubscriberWire()
 
 	userPersistenceWire()
 	userFinderWire()
@@ -141,6 +178,10 @@ func Bootstrap() {
 	taskFinderWire()
 	taskPersistenceWire()
 	taskServiceWire()
+
+	progressionFinderWire()
+	progressionPersistenceWire()
+	progressionServiceWire()
 
 	authApiWireBuilder()
 }

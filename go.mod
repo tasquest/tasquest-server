@@ -24,6 +24,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/toorop/gin-logrus v0.0.0-20200831135515-d2ee50d38dae
 	github.com/ugorji/go v1.2.1 // indirect
+	github.com/vardius/message-bus v1.1.5 // indirect
 	go.mongodb.org/mongo-driver v1.4.4
 	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e // indirect

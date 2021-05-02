@@ -1,4 +1,4 @@
-//+build wireinject
+// +build wireinject
 
 package main
 
@@ -10,10 +10,13 @@ import (
 
 	"tasquest.com/server/adapters/input/rest"
 	"tasquest.com/server/adapters/output/databases/mongorepositories"
+	message_bus "tasquest.com/server/adapters/output/eventbus/message-bus"
 	"tasquest.com/server/application/gamification/adventurers"
+	"tasquest.com/server/application/gamification/leveling"
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
+	"tasquest.com/server/infra/events"
 	"tasquest.com/server/infra/web"
 )
 
@@ -38,6 +41,24 @@ func databaseWire() *mongo.Database {
 func webServerWire() *gin.Engine {
 	panic(
 		wire.Build(web.ProvideWebServer),
+	)
+}
+
+func eventPublisherWire() events.Publisher {
+	panic(
+		wire.Build(
+			message_bus.NewMessenger,
+			wire.Bind(new(events.Publisher), new(*message_bus.Messenger)),
+		),
+	)
+}
+
+func eventSubscriberWire() events.Subscriber {
+	panic(
+		wire.Build(
+			message_bus.NewMessenger,
+			wire.Bind(new(events.Subscriber), new(*message_bus.Messenger)),
+		),
 	)
 }
 
@@ -138,9 +159,47 @@ func taskServiceWire() tasks.TaskService {
 		wire.Build(
 			taskFinderWire,
 			taskPersistenceWire,
-			adventurerServiceWire,
+			adventurerFinderWire,
 			tasks.NewTaskManager,
 			wire.Bind(new(tasks.TaskService), new(*tasks.TaskManager)),
+		),
+	)
+}
+
+/*****************************
+ *   Progression Providers   *
+ *****************************/
+
+func progressionFinderWire() leveling.ProgressionFinder {
+	panic(
+		wire.Build(
+			databaseWire,
+			mongorepositories.NewProgressionRepository,
+			wire.Bind(new(leveling.ProgressionFinder), new(*mongorepositories.ProgressionRepository)),
+		),
+	)
+}
+
+func progressionPersistenceWire() leveling.ProgressionPersistence {
+	panic(
+		wire.Build(
+			databaseWire,
+			mongorepositories.NewProgressionRepository,
+			wire.Bind(new(leveling.ProgressionPersistence), new(*mongorepositories.ProgressionRepository)),
+		),
+	)
+}
+
+func progressionServiceWire() leveling.ProgressionService {
+	panic(
+		wire.Build(
+			progressionFinderWire,
+			progressionPersistenceWire,
+			adventurerServiceWire,
+			adventurerFinderWire,
+			eventPublisherWire,
+			leveling.NewProgressionManagement,
+			wire.Bind(new(leveling.ProgressionService), new(*leveling.ProgressionManagement)),
 		),
 	)
 }
@@ -168,6 +227,8 @@ func Bootstrap() {
 	// Infra
 	databaseWire()
 	webServerWire()
+	eventPublisherWire()
+	eventSubscriberWire()
 	// security
 	userPersistenceWire()
 	userFinderWire()
@@ -180,6 +241,10 @@ func Bootstrap() {
 	taskFinderWire()
 	taskPersistenceWire()
 	taskServiceWire()
+	// Leveling
+	progressionFinderWire()
+	progressionPersistenceWire()
+	progressionServiceWire()
 	// Apis
 	authApiWireBuilder()
 }

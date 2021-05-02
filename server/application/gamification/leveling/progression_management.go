@@ -1,6 +1,8 @@
 package leveling
 
 import (
+	"sync"
+
 	"emperror.dev/errors"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -9,12 +11,34 @@ import (
 	"tasquest.com/server/infra/events"
 )
 
+var IsProgressionManagementInstanced sync.Once
+var progressionManagementInstance *ProgressionManagement
+
 type ProgressionManagement struct {
 	progressionFinder      ProgressionFinder
 	progressionPersistence ProgressionPersistence
 	adventurerService      adventurers.AdventurerService
 	adventurerFinder       adventurers.AdventurerFinder
 	publisher              events.Publisher
+}
+
+func NewProgressionManagement(
+	progressionFinder ProgressionFinder,
+	progressionPersistence ProgressionPersistence,
+	adventurerService adventurers.AdventurerService,
+	adventurerFinder adventurers.AdventurerFinder,
+	publisher events.Publisher,
+) *ProgressionManagement {
+	IsProgressionManagementInstanced.Do(func() {
+		progressionManagementInstance = &ProgressionManagement{
+			progressionFinder:      progressionFinder,
+			progressionPersistence: progressionPersistence,
+			adventurerService:      adventurerService,
+			adventurerFinder:       adventurerFinder,
+			publisher:              publisher,
+		}
+	})
+	return progressionManagementInstance
 }
 
 func (pm ProgressionManagement) CreateLevel(command CreateLevel) (ExpLevel, error) {
