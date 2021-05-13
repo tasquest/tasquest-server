@@ -42,32 +42,21 @@ func NewProgressionManagement(
 }
 
 func (pm ProgressionManagement) CreateLevel(command CreateLevel) (ExpLevel, error) {
-	var err error
-
-	validate := func(apply func(command CreateLevel) error) {
-		if err != nil {
-			return
-		}
-		err = apply(command)
-	}
-
-	validate(pm.validateExperience)
-	validate(pm.checkIfLevelExists)
-	validate(pm.checkIfExperienceOverlaps)
+	newLevel, latestExperience, err := pm.calculateNextLevel(command)
 
 	if err != nil {
 		return ExpLevel{}, err
 	}
 
 	return pm.progressionPersistence.Save(ExpLevel{
-		ID:    uuid.New(),
-		Level: command.Level,
-		From:  command.FromExp,
-		To:    command.ToExp,
+		ID:       uuid.New(),
+		Level:    newLevel,
+		StartExp: latestExperience,
+		EndExp:   command.NewTopExp,
 	})
 }
 
-func (pm ProgressionManagement) DeleteLevel(command DeleteLevel) (ExpLevel, error) {
+func (pm ProgressionManagement) DeleteHighestLevel() (ExpLevel, error) {
 	panic("implement me")
 }
 
@@ -96,8 +85,11 @@ func (pm ProgressionManagement) AwardExperience(command AwardExperience) error {
 
 // Helper Functions
 
-func (pm ProgressionManagement) checkCharacterProgression(adventurerId uuid.UUID, character adventurers.Character) (adventurers.Character, error) {
-	experience, err := pm.progressionFinder.FindLevelByExperience(character.Experience)
+func (pm ProgressionManagement) checkCharacterProgression(
+	adventurerId uuid.UUID,
+	character adventurers.Character,
+) (adventurers.Character, error) {
+	experience, err := pm.progressionFinder.FindLevelForExperience(character.Experience)
 
 	if err != nil {
 		return adventurers.Character{}, errors.WithStack(err)
@@ -120,27 +112,20 @@ func (pm ProgressionManagement) checkCharacterProgression(adventurerId uuid.UUID
 	return character, nil
 }
 
-func (pm ProgressionManagement) checkIfExperienceOverlaps(command CreateLevel) error {
-	if existingLevel, err := pm.progressionFinder.FindLevelByExperience(command.FromExp); err != nil {
-		return errors.WithStack(err)
-	} else if !cmp.Equal(existingLevel, ExpLevel{}) {
-		return errors.WithStack(ErrExperienceOverlaps)
-	}
-	return nil
-}
+func (pm ProgressionManagement) calculateNextLevel(command CreateLevel) (int, int64, error) {
+	levelBefore, err := pm.progressionFinder.FindLatestLevel()
 
-func (pm ProgressionManagement) checkIfLevelExists(command CreateLevel) error {
-	if existingLevel, err := pm.progressionFinder.FindLevelInformation(command.Level); err != nil {
-		return errors.WithStack(err)
-	} else if !cmp.Equal(existingLevel, ExpLevel{}) {
-		return errors.WithStack(ErrLevelAlreadyExists)
+	if err != nil {
+		return -1, -1, err
 	}
-	return nil
-}
 
-func (pm ProgressionManagement) validateExperience(command CreateLevel) error {
-	if command.FromExp > command.ToExp {
-		return errors.WithStack(ErrFromExpCannotBeHigherThanToExp)
+	if levelBefore.EndExp > command.NewTopExp {
+		return -1, -1, errors.WithStack(ErrNewLevelCantBeLowerThanLargestExistingLevel)
 	}
-	return nil
+
+	if !cmp.Equal(levelBefore, ExpLevel{}) {
+		return levelBefore.Level + 1, levelBefore.EndExp + 1, nil
+	}
+
+	return 1, 1, nil
 }

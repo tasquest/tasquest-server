@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"github.com/google/uuid"
+
 	"tasquest.com/server/commons"
 )
 
@@ -21,5 +22,6 @@ type TaskPersistence interface {
 
 type TaskFinder interface {
 	FindByID(id uuid.UUID) (Task, error)
-	FindByFilter(filter commons.Map) (Task, error)
+	FindOneByFilter(filter commons.SqlFilter) (Task, error)
+	FindAllByFilter(filter commons.SqlFilter) ([]Task, error)
 }

@@ -16,19 +16,21 @@ type AdventurerFinder struct {
 	mock.Mock
 }
 
-// FindByFilter provides a mock function with given fields: filter
-func (_m *AdventurerFinder) FindByFilter(filter commons.Map) (adventurers.Adventurer, error) {
+// FindAllByFilter provides a mock function with given fields: filter
+func (_m *AdventurerFinder) FindAllByFilter(filter commons.SqlFilter) ([]adventurers.Adventurer, error) {
 	ret := _m.Called(filter)
 
-	var r0 adventurers.Adventurer
-	if rf, ok := ret.Get(0).(func(commons.Map) adventurers.Adventurer); ok {
+	var r0 []adventurers.Adventurer
+	if rf, ok := ret.Get(0).(func(commons.SqlFilter) []adventurers.Adventurer); ok {
 		r0 = rf(filter)
 	} else {
-		r0 = ret.Get(0).(adventurers.Adventurer)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]adventurers.Adventurer)
+		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(commons.Map) error); ok {
+	if rf, ok := ret.Get(1).(func(commons.SqlFilter) error); ok {
 		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)
@@ -72,6 +74,27 @@ func (_m *AdventurerFinder) FindByUser(userID uuid.UUID) (adventurers.Adventurer
 	var r1 error
 	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
 		r1 = rf(userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FindOneByFilter provides a mock function with given fields: filter
+func (_m *AdventurerFinder) FindOneByFilter(filter commons.SqlFilter) (adventurers.Adventurer, error) {
+	ret := _m.Called(filter)
+
+	var r0 adventurers.Adventurer
+	if rf, ok := ret.Get(0).(func(commons.SqlFilter) adventurers.Adventurer); ok {
+		r0 = rf(filter)
+	} else {
+		r0 = ret.Get(0).(adventurers.Adventurer)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(commons.SqlFilter) error); ok {
+		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)
 	}

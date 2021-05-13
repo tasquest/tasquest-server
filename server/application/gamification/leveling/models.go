@@ -1,10 +1,16 @@
 package leveling
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type ExpLevel struct {
-	ID    uuid.UUID `json:"id" bson:"_id"`
-	Level int       `json:"level" bson:"level"`
-	From  int64     `json:"from" bson:"from"`
-	To    int64     `json:"to" bson:"to"`
+	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
+	Level     int       `json:"level"`
+	StartExp  int64     `json:"start_exp"`
+	EndExp    int64     `json:"end_exp"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

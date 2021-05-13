@@ -20,5 +20,6 @@ type AdventurerPersistence interface {
 type AdventurerFinder interface {
 	FindByID(id uuid.UUID) (Adventurer, error)
 	FindByUser(userID uuid.UUID) (Adventurer, error)
-	FindByFilter(filter commons.Map) (Adventurer, error)
+	FindOneByFilter(filter commons.SqlFilter) (Adventurer, error)
+	FindAllByFilter(filter commons.SqlFilter) ([]Adventurer, error)
 }

@@ -17,11 +17,14 @@ import (
 
 type ProgressionManagementTestSuite struct {
 	suite.Suite
+	// Dependencies
 	progressionFinder      *mocks.ProgressionFinder
 	progressionPersistence *mocks.ProgressionPersistence
 	adventurerService      *mocks.AdventurerService
 	adventurerFinder       *mocks.AdventurerFinder
 	eventPublisher         *mocks.Publisher
+	// InjectTo
+	progressionManagement *leveling.ProgressionManagement
 }
 
 func (suite *ProgressionManagementTestSuite) SetupTest() {
@@ -31,6 +34,13 @@ func (suite *ProgressionManagementTestSuite) SetupTest() {
 	suite.adventurerService = new(mocks.AdventurerService)
 	suite.adventurerFinder = new(mocks.AdventurerFinder)
 	suite.eventPublisher = new(mocks.Publisher)
+	suite.progressionManagement = leveling.NewProgressionManagement(
+		suite.progressionFinder,
+		suite.progressionPersistence,
+		suite.adventurerService,
+		suite.adventurerFinder,
+		suite.eventPublisher,
+	)
 }
 
 func (suite *ProgressionManagementTestSuite) checkMockAssertions() {
@@ -41,33 +51,64 @@ func (suite *ProgressionManagementTestSuite) checkMockAssertions() {
 	suite.eventPublisher.AssertExpectations(suite.T())
 }
 
-func (suite *ProgressionManagementTestSuite) TestLevelCreatedSuccessfully() {
-	progressionManagement := leveling.NewProgressionManagement(
-		suite.progressionFinder,
-		suite.progressionPersistence,
-		suite.adventurerService,
-		suite.adventurerFinder,
-		suite.eventPublisher,
-	)
+func (suite *ProgressionManagementTestSuite) TestCreateInitialLevelShouldWork() {
 
 	command := leveling.CreateLevel{
-		Level:   1,
-		FromExp: 10,
-		ToExp:   20,
+		NewTopExp: 20,
 	}
 
 	expectedResponse := leveling.ExpLevel{
-		ID:    uuid.New(),
-		Level: 1,
-		From:  10,
-		To:    20,
+		ID:       uuid.New(),
+		Level:    1,
+		StartExp: 1,
+		EndExp:   20,
 	}
 
-	suite.progressionFinder.On("FindLevelInformation", 1).Return(leveling.ExpLevel{}, nil)
-	suite.progressionFinder.On("FindLevelByExperience", int64(10)).Return(leveling.ExpLevel{}, nil)
-	suite.progressionPersistence.On("Save", mock.Anything).Return(expectedResponse, nil)
+	suite.progressionFinder.On("FindLatestLevel").Return(leveling.ExpLevel{}, nil)
+	suite.progressionPersistence.On("Save", mock.AnythingOfType("leveling.ExpLevel")).Return(expectedResponse, nil).Run(func(args mock.Arguments) {
+		arg := args.Get(0).(leveling.ExpLevel)
+		assert.Equal(suite.T(), 1, arg.Level)
+		assert.Equal(suite.T(), int64(1), arg.StartExp)
+		assert.Equal(suite.T(), int64(20), arg.EndExp)
+	})
 
-	expLevel, err := progressionManagement.CreateLevel(command)
+	expLevel, err := suite.progressionManagement.CreateLevel(command)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), expectedResponse, expLevel)
+
+	suite.checkMockAssertions()
+}
+
+func (suite *ProgressionManagementTestSuite) TestAddNewLevelShouldBeAfterLatestLevel() {
+
+	command := leveling.CreateLevel{
+		NewTopExp: 40,
+	}
+
+	latestExistingLevel := leveling.ExpLevel{
+		ID:       uuid.New(),
+		Level:    1,
+		StartExp: 1,
+		EndExp:   20,
+	}
+
+	expectedResponse := leveling.ExpLevel{
+		ID:       uuid.New(),
+		Level:    2,
+		StartExp: 21,
+		EndExp:   40,
+	}
+
+	suite.progressionFinder.On("FindLatestLevel").Return(latestExistingLevel, nil)
+	suite.progressionPersistence.On("Save", mock.AnythingOfType("leveling.ExpLevel")).Return(expectedResponse, nil).Run(func(args mock.Arguments) {
+		arg := args.Get(0).(leveling.ExpLevel)
+		assert.Equal(suite.T(), 2, arg.Level)
+		assert.Equal(suite.T(), int64(21), arg.StartExp)
+		assert.Equal(suite.T(), int64(40), arg.EndExp)
+	})
+
+	expLevel, err := suite.progressionManagement.CreateLevel(command)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), expectedResponse, expLevel)
@@ -76,37 +117,28 @@ func (suite *ProgressionManagementTestSuite) TestLevelCreatedSuccessfully() {
 }
 
 func (suite *ProgressionManagementTestSuite) TestLevelFromExperienceLargerThanToExperience() {
-	progressionManagement := leveling.NewProgressionManagement(
-		suite.progressionFinder,
-		suite.progressionPersistence,
-		suite.adventurerService,
-		suite.adventurerFinder,
-		suite.eventPublisher,
-	)
-
 	command := leveling.CreateLevel{
-		Level:   1,
-		FromExp: 20,
-		ToExp:   10,
+		NewTopExp: 10,
 	}
 
-	_, err := progressionManagement.CreateLevel(command)
+	latestExistingLevel := leveling.ExpLevel{
+		ID:       uuid.New(),
+		Level:    1,
+		StartExp: 1,
+		EndExp:   20,
+	}
+
+	suite.progressionFinder.On("FindLatestLevel").Return(latestExistingLevel, nil)
+
+	_, err := suite.progressionManagement.CreateLevel(command)
 
 	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), leveling.ErrFromExpCannotBeHigherThanToExp.Message, err.Error())
+	assert.Equal(suite.T(), leveling.ErrNewLevelCantBeLowerThanLargestExistingLevel.Message, err.Error())
 
 	suite.checkMockAssertions()
 }
 
 func (suite *ProgressionManagementTestSuite) TestAwardedExperienceLevelsCharacterUp() {
-	progressionManagement := leveling.NewProgressionManagement(
-		suite.progressionFinder,
-		suite.progressionPersistence,
-		suite.adventurerService,
-		suite.adventurerFinder,
-		suite.eventPublisher,
-	)
-
 	adventurerId := uuid.New()
 
 	existingCharacter := adventurers.Character{
@@ -136,11 +168,11 @@ func (suite *ProgressionManagementTestSuite) TestAwardedExperienceLevelsCharacte
 
 	suite.adventurerFinder.On("FindByID", adventurerId).Return(adventurer, nil)
 
-	suite.progressionFinder.On("FindLevelByExperience", int64(20)).Return(leveling.ExpLevel{
-		ID:    uuid.UUID{},
-		Level: 2,
-		From:  15,
-		To:    30,
+	suite.progressionFinder.On("FindLevelForExperience", int64(20)).Return(leveling.ExpLevel{
+		ID:       uuid.UUID{},
+		Level:    2,
+		StartExp: 15,
+		EndExp:   30,
 	}, nil)
 
 	suite.eventPublisher.On("Publish", leveling.AdventurerLevelingTopic, leveling.AdventurerLevelingEvent{
@@ -151,7 +183,7 @@ func (suite *ProgressionManagementTestSuite) TestAwardedExperienceLevelsCharacte
 
 	suite.adventurerService.On("UpdateCharacter", adventurerId, expectedCharacter).Return(adventurers.Adventurer{}, nil)
 
-	err := progressionManagement.AwardExperience(command)
+	err := suite.progressionManagement.AwardExperience(command)
 
 	assert.Nil(suite.T(), err)
 
@@ -159,14 +191,6 @@ func (suite *ProgressionManagementTestSuite) TestAwardedExperienceLevelsCharacte
 }
 
 func (suite *ProgressionManagementTestSuite) TestAwardedExperienceDoesNotLevelsCharacterUp() {
-	progressionManagement := leveling.NewProgressionManagement(
-		suite.progressionFinder,
-		suite.progressionPersistence,
-		suite.adventurerService,
-		suite.adventurerFinder,
-		suite.eventPublisher,
-	)
-
 	adventurerId := uuid.New()
 
 	existingCharacter := adventurers.Character{
@@ -195,17 +219,16 @@ func (suite *ProgressionManagementTestSuite) TestAwardedExperienceDoesNotLevelsC
 	}
 
 	suite.adventurerFinder.On("FindByID", adventurerId).Return(adventurer, nil)
-
-	suite.progressionFinder.On("FindLevelByExperience", int64(11)).Return(leveling.ExpLevel{
-		ID:    uuid.UUID{},
-		Level: 1,
-		From:  10,
-		To:    20,
+	suite.progressionFinder.On("FindLevelForExperience", int64(11)).Return(leveling.ExpLevel{
+		ID:       uuid.UUID{},
+		Level:    1,
+		StartExp: 10,
+		EndExp:   20,
 	}, nil)
 
 	suite.adventurerService.On("UpdateCharacter", adventurerId, expectedCharacter).Return(adventurers.Adventurer{}, nil)
 
-	err := progressionManagement.AwardExperience(command)
+	err := suite.progressionManagement.AwardExperience(command)
 
 	assert.Nil(suite.T(), err)
 

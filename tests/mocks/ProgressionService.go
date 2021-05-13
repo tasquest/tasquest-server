@@ -47,20 +47,20 @@ func (_m *ProgressionService) CreateLevel(command leveling.CreateLevel) (levelin
 	return r0, r1
 }
 
-// DeleteLevel provides a mock function with given fields: command
-func (_m *ProgressionService) DeleteLevel(command leveling.DeleteLevel) (leveling.ExpLevel, error) {
-	ret := _m.Called(command)
+// DeleteHighestLevel provides a mock function with given fields:
+func (_m *ProgressionService) DeleteHighestLevel() (leveling.ExpLevel, error) {
+	ret := _m.Called()
 
 	var r0 leveling.ExpLevel
-	if rf, ok := ret.Get(0).(func(leveling.DeleteLevel) leveling.ExpLevel); ok {
-		r0 = rf(command)
+	if rf, ok := ret.Get(0).(func() leveling.ExpLevel); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(leveling.ExpLevel)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(leveling.DeleteLevel) error); ok {
-		r1 = rf(command)
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
 	} else {
 		r1 = ret.Error(1)
 	}

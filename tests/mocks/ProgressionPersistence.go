@@ -53,24 +53,3 @@ func (_m *ProgressionPersistence) Save(level leveling.ExpLevel) (leveling.ExpLev
 
 	return r0, r1
 }
-
-// Update provides a mock function with given fields: level
-func (_m *ProgressionPersistence) Update(level leveling.ExpLevel) (leveling.ExpLevel, error) {
-	ret := _m.Called(level)
-
-	var r0 leveling.ExpLevel
-	if rf, ok := ret.Get(0).(func(leveling.ExpLevel) leveling.ExpLevel); ok {
-		r0 = rf(level)
-	} else {
-		r0 = ret.Get(0).(leveling.ExpLevel)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(leveling.ExpLevel) error); ok {
-		r1 = rf(level)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}

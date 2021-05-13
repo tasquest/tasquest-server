@@ -6,16 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
+
+	fmw_gorm "gorm.io/gorm"
 
 	"tasquest.com/server/adapters/input/rest"
-	"tasquest.com/server/adapters/output/databases/mongorepositories"
+	"tasquest.com/server/adapters/output/databases/gorm"
 	message_bus "tasquest.com/server/adapters/output/eventbus/message-bus"
+	"tasquest.com/server/application"
 	"tasquest.com/server/application/gamification/adventurers"
 	"tasquest.com/server/application/gamification/leveling"
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
+	"tasquest.com/server/infra/database"
 	"tasquest.com/server/infra/events"
 	"tasquest.com/server/infra/web"
 )
@@ -32,9 +35,12 @@ func loggerWire() *logrus.Logger {
 /**************************
  *    Infra Providers     *
  **************************/
-func databaseWire() *mongo.Database {
+func databaseWire() *fmw_gorm.DB {
 	panic(
-		wire.Build(mongorepositories.ProvideDatasource),
+		wire.Build(
+			database.ReadFromDisk,
+			gorm.NewGormPostgres,
+		),
 	)
 }
 
@@ -62,6 +68,15 @@ func eventSubscriberWire() events.Subscriber {
 	)
 }
 
+func subscriberManagerWire() *application.SubscriptionManagement {
+	panic(
+		wire.Build(
+			levelingSubscriberWire,
+			application.NewSubscriptionManagement,
+		),
+	)
+}
+
 /**************************
  *    security Providers  *
  **************************/
@@ -69,8 +84,8 @@ func userFinderWire() security.UserFinder {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewUserRepository,
-			wire.Bind(new(security.UserFinder), new(*mongorepositories.UserRepository)),
+			gorm.NewUserGormRepository,
+			wire.Bind(new(security.UserFinder), new(*gorm.UsersGormRepository)),
 		),
 	)
 }
@@ -79,8 +94,8 @@ func userPersistenceWire() security.UserPersistence {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewUserRepository,
-			wire.Bind(new(security.UserPersistence), new(*mongorepositories.UserRepository)),
+			gorm.NewUserGormRepository,
+			wire.Bind(new(security.UserPersistence), new(*gorm.UsersGormRepository)),
 		),
 	)
 }
@@ -103,8 +118,8 @@ func adventurerFinderWire() adventurers.AdventurerFinder {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewAdventurerRepository,
-			wire.Bind(new(adventurers.AdventurerFinder), new(*mongorepositories.AdventurerRepository)),
+			gorm.NewAdventurersGormRepository,
+			wire.Bind(new(adventurers.AdventurerFinder), new(*gorm.AdventurersGormRepository)),
 		),
 	)
 }
@@ -113,8 +128,8 @@ func adventurerPersistenceWire() adventurers.AdventurerPersistence {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewAdventurerRepository,
-			wire.Bind(new(adventurers.AdventurerPersistence), new(*mongorepositories.AdventurerRepository)),
+			gorm.NewAdventurersGormRepository,
+			wire.Bind(new(adventurers.AdventurerPersistence), new(*gorm.AdventurersGormRepository)),
 		),
 	)
 }
@@ -138,8 +153,8 @@ func taskFinderWire() tasks.TaskFinder {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewTaskRepository,
-			wire.Bind(new(tasks.TaskFinder), new(*mongorepositories.TaskRepository)),
+			gorm.NewTasksGormRepository,
+			wire.Bind(new(tasks.TaskFinder), new(*gorm.TasksGormRepository)),
 		),
 	)
 }
@@ -148,8 +163,8 @@ func taskPersistenceWire() tasks.TaskPersistence {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewTaskRepository,
-			wire.Bind(new(tasks.TaskPersistence), new(*mongorepositories.TaskRepository)),
+			gorm.NewTasksGormRepository,
+			wire.Bind(new(tasks.TaskPersistence), new(*gorm.TasksGormRepository)),
 		),
 	)
 }
@@ -175,8 +190,8 @@ func progressionFinderWire() leveling.ProgressionFinder {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewProgressionRepository,
-			wire.Bind(new(leveling.ProgressionFinder), new(*mongorepositories.ProgressionRepository)),
+			gorm.NewProgressionGormRepository,
+			wire.Bind(new(leveling.ProgressionFinder), new(*gorm.ProgressionGormRepository)),
 		),
 	)
 }
@@ -185,8 +200,8 @@ func progressionPersistenceWire() leveling.ProgressionPersistence {
 	panic(
 		wire.Build(
 			databaseWire,
-			mongorepositories.NewProgressionRepository,
-			wire.Bind(new(leveling.ProgressionPersistence), new(*mongorepositories.ProgressionRepository)),
+			gorm.NewProgressionGormRepository,
+			wire.Bind(new(leveling.ProgressionPersistence), new(*gorm.ProgressionGormRepository)),
 		),
 	)
 }
@@ -201,6 +216,16 @@ func progressionServiceWire() leveling.ProgressionService {
 			eventPublisherWire,
 			leveling.NewProgressionManagement,
 			wire.Bind(new(leveling.ProgressionService), new(*leveling.ProgressionManagement)),
+		),
+	)
+}
+
+func levelingSubscriberWire() *leveling.Subscribers {
+	panic(
+		wire.Build(
+			eventSubscriberWire,
+			progressionServiceWire,
+			leveling.NewLevelingSubscribers,
 		),
 	)
 }
@@ -230,6 +255,7 @@ func Bootstrap() {
 	webServerWire()
 	eventPublisherWire()
 	eventSubscriberWire()
+	subscriberManagerWire()
 	// security
 	userPersistenceWire()
 	userFinderWire()
@@ -246,6 +272,7 @@ func Bootstrap() {
 	progressionFinderWire()
 	progressionPersistenceWire()
 	progressionServiceWire()
+	levelingSubscriberWire()
 	// Apis
 	authApiWireBuilder()
 }

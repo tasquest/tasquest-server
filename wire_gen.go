@@ -8,15 +8,18 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
+	"gorm.io/gorm"
+
 	"tasquest.com/server/adapters/input/rest"
-	"tasquest.com/server/adapters/output/databases/mongorepositories"
+	gorm2 "tasquest.com/server/adapters/output/databases/gorm"
 	"tasquest.com/server/adapters/output/eventbus/message-bus"
+	"tasquest.com/server/application"
 	"tasquest.com/server/application/gamification/adventurers"
 	"tasquest.com/server/application/gamification/leveling"
 	"tasquest.com/server/application/gamification/tasks"
 	"tasquest.com/server/application/security"
 	"tasquest.com/server/commons"
+	"tasquest.com/server/infra/database"
 	"tasquest.com/server/infra/events"
 	"tasquest.com/server/infra/web"
 )
@@ -34,9 +37,10 @@ func loggerWire() *logrus.Logger {
 /**************************
  *    Infra Providers     *
  **************************/
-func databaseWire() *mongo.Database {
-	database := mongorepositories.ProvideDatasource()
-	return database
+func databaseWire() *gorm.DB {
+	dbConfig := database.ReadFromDisk()
+	db := gorm2.NewGormPostgres(dbConfig)
+	return db
 }
 
 func webServerWire() *gin.Engine {
@@ -54,19 +58,25 @@ func eventSubscriberWire() events.Subscriber {
 	return messenger
 }
 
+func subscriberManagerWire() *application.SubscriptionManagement {
+	subscribers := levelingSubscriberWire()
+	subscriptionManagement := application.NewSubscriptionManagement(subscribers)
+	return subscriptionManagement
+}
+
 /**************************
  *    security Providers  *
  **************************/
 func userFinderWire() security.UserFinder {
-	database := databaseWire()
-	userRepository := mongorepositories.NewUserRepository(database)
-	return userRepository
+	db := databaseWire()
+	usersGormRepository := gorm2.NewUserGormRepository(db)
+	return usersGormRepository
 }
 
 func userPersistenceWire() security.UserPersistence {
-	database := databaseWire()
-	userRepository := mongorepositories.NewUserRepository(database)
-	return userRepository
+	db := databaseWire()
+	usersGormRepository := gorm2.NewUserGormRepository(db)
+	return usersGormRepository
 }
 
 func userServiceWire() security.UserService {
@@ -80,15 +90,15 @@ func userServiceWire() security.UserService {
  *    Adventurers Providers  *
  *****************************/
 func adventurerFinderWire() adventurers.AdventurerFinder {
-	database := databaseWire()
-	adventurerRepository := mongorepositories.NewAdventurerRepository(database)
-	return adventurerRepository
+	db := databaseWire()
+	adventurersGormRepository := gorm2.NewAdventurersGormRepository(db)
+	return adventurersGormRepository
 }
 
 func adventurerPersistenceWire() adventurers.AdventurerPersistence {
-	database := databaseWire()
-	adventurerRepository := mongorepositories.NewAdventurerRepository(database)
-	return adventurerRepository
+	db := databaseWire()
+	adventurersGormRepository := gorm2.NewAdventurersGormRepository(db)
+	return adventurersGormRepository
 }
 
 func adventurerServiceWire() adventurers.AdventurerService {
@@ -103,15 +113,15 @@ func adventurerServiceWire() adventurers.AdventurerService {
  *      Task Providers       *
  *****************************/
 func taskFinderWire() tasks.TaskFinder {
-	database := databaseWire()
-	taskRepository := mongorepositories.NewTaskRepository(database)
-	return taskRepository
+	db := databaseWire()
+	tasksGormRepository := gorm2.NewTasksGormRepository(db)
+	return tasksGormRepository
 }
 
 func taskPersistenceWire() tasks.TaskPersistence {
-	database := databaseWire()
-	taskRepository := mongorepositories.NewTaskRepository(database)
-	return taskRepository
+	db := databaseWire()
+	tasksGormRepository := gorm2.NewTasksGormRepository(db)
+	return tasksGormRepository
 }
 
 func taskServiceWire() tasks.TaskService {
@@ -124,15 +134,15 @@ func taskServiceWire() tasks.TaskService {
 }
 
 func progressionFinderWire() leveling.ProgressionFinder {
-	database := databaseWire()
-	progressionRepository := mongorepositories.NewProgressionRepository(database)
-	return progressionRepository
+	db := databaseWire()
+	progressionGormRepository := gorm2.NewProgressionGormRepository(db)
+	return progressionGormRepository
 }
 
 func progressionPersistenceWire() leveling.ProgressionPersistence {
-	database := databaseWire()
-	progressionRepository := mongorepositories.NewProgressionRepository(database)
-	return progressionRepository
+	db := databaseWire()
+	progressionGormRepository := gorm2.NewProgressionGormRepository(db)
+	return progressionGormRepository
 }
 
 func progressionServiceWire() leveling.ProgressionService {
@@ -143,6 +153,13 @@ func progressionServiceWire() leveling.ProgressionService {
 	publisher := eventPublisherWire()
 	progressionManagement := leveling.NewProgressionManagement(progressionFinder, progressionPersistence, adventurerService, adventurerFinder, publisher)
 	return progressionManagement
+}
+
+func levelingSubscriberWire() *leveling.Subscribers {
+	subscriber := eventSubscriberWire()
+	progressionService := progressionServiceWire()
+	subscribers := leveling.NewLevelingSubscribers(subscriber, progressionService)
+	return subscribers
 }
 
 /**************************
@@ -167,6 +184,7 @@ func Bootstrap() {
 	webServerWire()
 	eventPublisherWire()
 	eventSubscriberWire()
+	subscriberManagerWire()
 
 	userPersistenceWire()
 	userFinderWire()
@@ -183,6 +201,7 @@ func Bootstrap() {
 	progressionFinderWire()
 	progressionPersistenceWire()
 	progressionServiceWire()
+	levelingSubscriberWire()
 
 	authApiWireBuilder()
 }

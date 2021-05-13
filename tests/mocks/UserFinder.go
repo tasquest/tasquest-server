@@ -16,6 +16,29 @@ type UserFinder struct {
 	mock.Mock
 }
 
+// FindAllByFilter provides a mock function with given fields: filter
+func (_m *UserFinder) FindAllByFilter(filter commons.SqlFilter) ([]security.User, error) {
+	ret := _m.Called(filter)
+
+	var r0 []security.User
+	if rf, ok := ret.Get(0).(func(commons.SqlFilter) []security.User); ok {
+		r0 = rf(filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]security.User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(commons.SqlFilter) error); ok {
+		r1 = rf(filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // FindByEmail provides a mock function with given fields: email
 func (_m *UserFinder) FindByEmail(email string) (security.User, error) {
 	ret := _m.Called(email)
@@ -37,27 +60,6 @@ func (_m *UserFinder) FindByEmail(email string) (security.User, error) {
 	return r0, r1
 }
 
-// FindByFilter provides a mock function with given fields: filter
-func (_m *UserFinder) FindByFilter(filter commons.Map) (security.User, error) {
-	ret := _m.Called(filter)
-
-	var r0 security.User
-	if rf, ok := ret.Get(0).(func(commons.Map) security.User); ok {
-		r0 = rf(filter)
-	} else {
-		r0 = ret.Get(0).(security.User)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(commons.Map) error); ok {
-		r1 = rf(filter)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // FindByID provides a mock function with given fields: id
 func (_m *UserFinder) FindByID(id uuid.UUID) (security.User, error) {
 	ret := _m.Called(id)
@@ -72,6 +74,27 @@ func (_m *UserFinder) FindByID(id uuid.UUID) (security.User, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
 		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FindOneByFilter provides a mock function with given fields: filter
+func (_m *UserFinder) FindOneByFilter(filter commons.SqlFilter) (security.User, error) {
+	ret := _m.Called(filter)
+
+	var r0 security.User
+	if rf, ok := ret.Get(0).(func(commons.SqlFilter) security.User); ok {
+		r0 = rf(filter)
+	} else {
+		r0 = ret.Get(0).(security.User)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(commons.SqlFilter) error); ok {
+		r1 = rf(filter)
 	} else {
 		r1 = ret.Error(1)
 	}
