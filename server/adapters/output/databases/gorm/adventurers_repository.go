@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"tasquest.com/server/application/gamification/adventurers"
 	"tasquest.com/server/commons"
@@ -27,10 +28,12 @@ func NewAdventurersGormRepository(db *gorm.DB) *AdventurersGormRepository {
 }
 
 func (repo AdventurersGormRepository) migrate() {
-	err := adventurersGormRepositoryInstance.db.AutoMigrate(adventurers.Adventurer{})
-
-	if err != nil {
+	if err := adventurersGormRepositoryInstance.db.AutoMigrate(adventurers.Adventurer{}); err != nil {
 		commons.IrrecoverableFailure("Failed to run SQL Migrations for the Adventurer Entity", err)
+	}
+
+	if err := adventurersGormRepositoryInstance.db.AutoMigrate(adventurers.Character{}); err != nil {
+		commons.IrrecoverableFailure("Failed to run SQL Migrations for the Character Entity", err)
 	}
 }
 
@@ -44,10 +47,9 @@ func (repo AdventurersGormRepository) FindByUser(userID uuid.UUID) (adventurers.
 
 func (repo AdventurersGormRepository) FindOneByFilter(filter commons.SqlFilter) (adventurers.Adventurer, error) {
 	var adventurer adventurers.Adventurer
+	query := filter.ToFormattedQuery()
 
-	tx := repo.db.First(&adventurer, filter.ToFormattedQuery())
-
-	if tx.Error != nil {
+	if tx := repo.db.Where(query.Query, query.Params...).Preload(clause.Associations).First(&adventurer); tx.Error != nil {
 		return adventurers.Adventurer{}, tx.Error
 	}
 
@@ -56,10 +58,9 @@ func (repo AdventurersGormRepository) FindOneByFilter(filter commons.SqlFilter) 
 
 func (repo AdventurersGormRepository) FindAllByFilter(filter commons.SqlFilter) ([]adventurers.Adventurer, error) {
 	var adventurer []adventurers.Adventurer
+	query := filter.ToFormattedQuery()
 
-	tx := repo.db.Find(&adventurer, filter.ToFormattedQuery())
-
-	if tx.Error != nil {
+	if tx := repo.db.Where(query.Query, query.Params...).Preload(clause.Associations).Scan(&adventurer); tx.Error != nil {
 		return []adventurers.Adventurer{}, tx.Error
 	}
 
@@ -67,9 +68,7 @@ func (repo AdventurersGormRepository) FindAllByFilter(filter commons.SqlFilter) 
 }
 
 func (repo AdventurersGormRepository) Save(adventurer adventurers.Adventurer) (adventurers.Adventurer, error) {
-	tx := repo.db.Create(&adventurer)
-
-	if tx.Error != nil {
+	if tx := repo.db.Create(&adventurer); tx.Error != nil {
 		return adventurers.Adventurer{}, tx.Error
 	}
 
@@ -77,9 +76,7 @@ func (repo AdventurersGormRepository) Save(adventurer adventurers.Adventurer) (a
 }
 
 func (repo AdventurersGormRepository) Update(adventurer adventurers.Adventurer) (adventurers.Adventurer, error) {
-	tx := repo.db.Updates(&adventurer)
-
-	if tx.Error != nil {
+	if tx := repo.db.Updates(&adventurer); tx.Error != nil {
 		return adventurers.Adventurer{}, tx.Error
 	}
 
